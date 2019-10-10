@@ -18,8 +18,8 @@ setwd("D:/Work/NC State/Fall 2019/ISE 560 Stochastic Models for Industrial Engin
 # Extraction
 
 ```{r}
-pnps.main <-read.csv("~/RawData/Lenovo_Survey_Data_pNPS.csv",header = TRUE)
-cis.main <- read.csv("~/RawData/CID_Web_Sentiment.csv", header = TRUE)
+pnps.main <-read.csv("../RawData/Lenovo_Survey_Data_pNPS.csv",header = TRUE)
+cis.main <- read.csv("../RawData/CID_Web_Sentiment.csv", header = TRUE)
 ```
 
 # Selection of Ideapad 120 series 

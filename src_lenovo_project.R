@@ -17,8 +17,8 @@ calculate.PIS <- function(cis.working) {
   row = 1
   for(prod in list.products){
       cis.slice = cis.working[cis.working$Product == prod, ]
-      num.neg = length(cis.working$Sentiment=="NEGATIVE")
-      num.pos = length(cis.working$Sentiment=="POSITIVE")
+      num.neg = length(which(cis.working$Sentiment=="NEGATIVE"))
+      num.pos = length(which(cis.working$Sentiment=="POSITIVE"))
       pis.working$Product[row] = prod
       pis.working$Year.make[row] = ifelse(!is.null(strsplit(cis.slice$Product[1], " ")[[1]][3]), 
                                           yes = strsplit(cis.slice$Product[1], " ")[[1]][3],
