@@ -18,25 +18,30 @@ setwd("D:/Work/NC State/Fall 2019/ISE 560 Stochastic Models for Industrial Engin
 # Extraction
 
 ```{r}
-pnps.main <-read.csv("../RawData/Lenovo_Survey_Data_pNPS.csv",header = TRUE)
+nps.main <-read.csv("../RawData/Lenovo_Survey_Data_pNPS_Rev2.csv",header = TRUE)
 cis.main <- read.csv("../RawData/CID_Web_Sentiment.csv", header = TRUE)
+nps.main <- mutate(nps.main, Product = tolower(as.character(Product)), Date.Survey = as.Date(Date.Survey, format = "%m/%d/%Y"))
+cis.main <- mutate(cis.main, Product = tolower(as.character(Product)), Comment.Date = as.Date(Comment.Date, format = "%m/%d/%y"))
+
 ```
 
 # Selection of Ideapad 120 series 
 
 ```{r}
-pnps.working <- pnps.main[grep("IdeaPad 1", pnps.main$Product),]
-cis.working <- cis.main[grep("IDEAPAD 1",cis.main$Product),]
+nps.working <- nps.main[grep("ideapad 1", nps.main$Product),]
+cis.working <- cis.main[grep("ideapad 1",cis.main$Product),]
 
-pnps.working <- mutate(pnps.working, Product = as.character(Product), Date.Survey = as.Date(Date.Survey, format = "%m/%d/%Y"))
-cis.working <- mutate(cis.working, Product = as.character(Product), Comment.Date = as.Date(Comment.Date, format = "%m/%d/%y"))
+nps.working$Product.NPS <- as.numeric(levels(nps.working$Product.NPS))[nps.working$Product.NPS]
 
-pnps.working <- select(pnps.working, Date.Survey, Country, Product.NPS, Brand.NPS, Segment, Product)
+nps.working <- mutate(nps.working, Product = tolower(as.character(Product)), Date.Survey = as.Date(Date.Survey, format = "%m/%d/%Y"))
+cis.working <- mutate(cis.working, Product = tolower(as.character(Product)), Comment.Date = as.Date(Comment.Date, format = "%m/%d/%y"))
+
+nps.working <- select(nps.working, Date.Survey, Country, Product.NPS, Segment, Product)
 cis.working <- select(cis.working, comment_id, Comment.Date, Sentiment, Category, Stars.Rating, Business.Group, Product)
 
 pis.working <- calculate.PIS(cis.working = cis.working)
-
-
+pnps.working <- calculate.NPS(nps.working = nps.working)
+# ideapad 110 17
 # ggplot(main.df)+geom_histogram(aes(x = ))
 # ggplot(main.df)+geom_point(aes(x = Stars.Rating,y = Product.NPS, color = ))+facet_wrap(Month~Segment)
 

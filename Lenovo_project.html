@@ -376,21 +376,27 @@ $(document).ready(function () {
 </div>
 
 
-<pre class="r"><code>main &lt;-read.csv(&quot;Lenovo_Survey_Data_pNPS.csv&quot;,header = TRUE)
-working &lt;- main[main$Product == &#39;IdeaPad 120s 14&#39;,]
-length(unique(main$Series))</code></pre>
-<pre><code>## [1] 74</code></pre>
-<div id="questions" class="section level2">
-<h2>Questions:</h2>
-<ul>
-<li>What is “open-ended” for each category</li>
-<li>What does a single row represent? As there are multiple pNPS scores for each product, does a row represent the result of the survey within a small sample of the polulation (for example, different parts of the country)?</li>
-<li>Do the columns with “satisfaction” that have numerical values represent CID sentiment rating?</li>
-</ul>
+<div id="extraction" class="section level1">
+<h1>Extraction</h1>
+<pre class="r"><code>pnps.main &lt;-read.csv(&quot;../RawData/Lenovo_Survey_Data_pNPS.csv&quot;,header = TRUE)
+cis.main &lt;- read.csv(&quot;../RawData/CID_Web_Sentiment.csv&quot;, header = TRUE)</code></pre>
 </div>
-<div id="initial-tests" class="section level1">
-<h1>Initial tests</h1>
-<p>As there are multiple</p>
+<div id="selection-of-ideapad-120-series" class="section level1">
+<h1>Selection of Ideapad 120 series</h1>
+<pre class="r"><code>pnps.working &lt;- pnps.main[grep(&quot;IdeaPad 1&quot;, pnps.main$Product),]
+cis.working &lt;- cis.main[grep(&quot;IDEAPAD 1&quot;,cis.main$Product),]
+
+pnps.working &lt;- mutate(pnps.working, Product = as.character(Product), Date.Survey = as.Date(Date.Survey, format = &quot;%m/%d/%Y&quot;))
+cis.working &lt;- mutate(cis.working, Product = as.character(Product), Comment.Date = as.Date(Comment.Date, format = &quot;%m/%d/%y&quot;))
+
+pnps.working &lt;- select(pnps.working, Date.Survey, Country, Product.NPS, Brand.NPS, Segment, Product)
+cis.working &lt;- select(cis.working, comment_id, Comment.Date, Sentiment, Category, Stars.Rating, Business.Group, Product)
+
+pis.working &lt;- calculate.PIS(cis.working = cis.working)
+
+
+# ggplot(main.df)+geom_histogram(aes(x = ))
+# ggplot(main.df)+geom_point(aes(x = Stars.Rating,y = Product.NPS, color = ))+facet_wrap(Month~Segment)</code></pre>
 </div>
 
 
