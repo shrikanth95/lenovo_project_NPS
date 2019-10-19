@@ -25,11 +25,9 @@ cis.main <- mutate(cis.main, Product = tolower(as.character(Product)), Comment.D
 
 ```
 
-# Selection of Ideapad 120 series 
-
 ```{r}
-nps.working <- nps.main[grep("ideapad 1", nps.main$Product),]
-cis.working <- cis.main[grep("ideapad 1",cis.main$Product),]
+nps.working <- nps.main#[grep("ideapad 1", nps.main$Product),]
+cis.working <- cis.main#[grep("ideapad 1",cis.main$Product),]
 
 nps.working$Product.NPS <- as.numeric(levels(nps.working$Product.NPS))[nps.working$Product.NPS]
 
@@ -41,7 +39,6 @@ cis.working <- select(cis.working, comment_id, Comment.Date, Sentiment, Category
 
 pis.working <- calculate.PIS(cis.working = cis.working)
 pnps.working <- calculate.NPS(nps.working = nps.working)
-# ideapad 110 17
 # ggplot(main.df)+geom_histogram(aes(x = ))
 # ggplot(main.df)+geom_point(aes(x = Stars.Rating,y = Product.NPS, color = ))+facet_wrap(Month~Segment)
 

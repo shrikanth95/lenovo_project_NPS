@@ -43,28 +43,34 @@ calculate.PIS <- function(cis.working) {
 
 calculate.NPS <- function(nps.working) {
   
+  nps.working$Comment.time =  format(nps.working$Date.Survey, "%Y-%m")
   list.products = unique(nps.working$Product)
+  list.comment.time = unique(nps.working$Comment.time)
+  len.working = length(list.products)*length(list.comment.time)
   
-  pnps.working <- data.frame(Product = character(length(list.products)), 
-                            pNPS = numeric(length(list.products)), 
-                            # bNPS = numeric(length(list.products)), 
-                            sample.size = numeric(length(list.products)),
+  pnps.working <- data.frame(Product = character(len.working), 
+                            pNPS = numeric(len.working), 
+                            Comment.time = character(len.working),
+                            sample.size = numeric(len.working),
                             stringsAsFactors = FALSE)
   row = 1
   for(prod in list.products){
-    nps.slice = nps.working[nps.working$Product == prod, ]
-    pnps.working$Product[row] = prod
-    pnps.working$sample.size[row] = nrow(nps.slice)
-    if(is.numeric(nrow(nps.slice))){ 
-      num.prom = nrow(nps.slice[(nps.slice$Product.NPS>8)&(nps.slice$Product.NPS<11),])
-      num.det = nrow(nps.slice[(nps.slice$Product.NPS>-1)&(nps.slice$Product.NPS<7),])
-      pnps.working$pNPS[row] = num.prom - num.det
+    for(comment.time in list.comment.time){
+      nps.slice = nps.working[(nps.working$Product == prod)&(nps.working$Comment.time == comment.time), ]
+      pnps.working$Product[row] = prod
+      pnps.working$Comment.time[row] = comment.time
+      pnps.working$sample.size[row] = nrow(nps.slice)
+      if(nrow(nps.slice)>2){ 
+        num.prom = nrow(nps.slice[(nps.slice$Product.NPS>8)&(nps.slice$Product.NPS<11),])
+        num.det = nrow(nps.slice[(nps.slice$Product.NPS>-1)&(nps.slice$Product.NPS<7),])
+        pnps.working$pNPS[row] = num.prom - num.det
+      }
+      else{
+        pnps.working$pNPS[row] = NA
+        # pnps.working$bNPS[row] = -1
+      }
+      row = row + 1
     }
-    else{
-      pnps.working$pNPS[row] = NA
-      # pnps.working$bNPS[row] = -1
-    }
-    row = row + 1
   }
   return(pnps.working)
 }
