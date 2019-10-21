@@ -1,0 +1,81 @@
+---
+title: "project 1 updated"
+author: "Shawn Markham, Melissa Wong, Shrakinth, Lekhana Yennam, Shrikanth"
+date: "October 21, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+#install.packages("readxl")
+library("readxl")
+library(tidyverse)
+#install.packages("GGally")
+library(GGally)
+#install.packages("ggcorrplot")
+library(ggcorrplot)
+library(tidyverse)
+```
+```{r}
+my_data <- read_excel("LenovoSurveyRev.xlsx")
+
+```
+
+```{r}
+str(my_data)
+
+```
+
+```{r}
+summary(my_data)
+```
+```{r}
+commercial = my_data %>% filter(Segment=="Lenovo - Commercial")
+```
+
+```{r}
+str(commercial)
+summary(commercial)
+```
+```{r}
+nrow(commercial)
+#commercial
+```
+```{r}
+lessthan3 = commercial %>% filter(`Ownership Period`=="Less than 3 months")
+btw3and6 = commercial %>% filter(`Ownership Period`=="Between 3 – 6 months")
+btw7and12 = commercial %>% filter(`Ownership Period`=="Between 7 – 12 months")
+morethan12= commercial %>% filter(`Ownership Period`=="More than 12 months")
+notavailable= commercial %>% filter(`Ownership Period`=="Not available")
+```
+
+```{r}
+nrow(lessthan3)
+nrow(btw3and6)
+nrow(btw7and12)
+nrow(morethan12)
+nrow(notavailable)
+```
+```{r}
+SMB = my_data %>% filter(Segment=="Lenovo - SMB")
+str(SMB)
+summary(SMB)
+```
+```{r}
+SMBlessthan3 = SMB %>% filter(`Ownership Period`=="Less than 3 months")
+SMBbtw3and6 = SMB %>% filter(`Ownership Period`=="Between 3 – 6 months")
+SMBbtw7and12 = SMB %>% filter(`Ownership Period`=="Between 7 – 12 months")
+SMBmorethan12= SMB %>% filter(`Ownership Period`=="More than 12 months")
+SMBnotavailable= SMB %>% filter(`Ownership Period`=="Not available")
+```
+
+```{r}
+nrow(SMBlessthan3)
+nrow(SMBbtw3and6)
+nrow(SMBbtw7and12)
+nrow(SMBmorethan12)
+nrow(SMBnotavailable)
+```
+
