@@ -1,0 +1,2 @@
+# Keep all Lenovo data files from being uploaded to github
+*.xlsx
