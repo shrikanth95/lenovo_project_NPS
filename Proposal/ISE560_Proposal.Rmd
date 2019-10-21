@@ -1,0 +1,43 @@
+---
+title: "ISE 560 Project Proposal"
+author: "Shawn Markham, Melissa Wong, Shrikanth Yadav & Lekhana Yennam"
+date: \today
+header-includes:
+   - \usepackage{fontspec}
+   - \setmainfont{Times New Roman}
+output: 
+  pdf_document:
+    latex_engine: xelatex
+    number_sections: true
+    fig_caption: true
+fontsize: 12pt
+geometry: margin=1in 
+---
+
+```{r echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width="50%")
+knitr::opts_chunk$set(fig.align = "center")
+
+library(tidyverse)
+```
+
+# Overview
+
+## Model
+
+## Metrics
+
+# NPS & Telemetry
+
+# Key Variables and Parameters
+
+# Critical Uncertainties
+
+# Markov Decision Process
+
+# Preliminary Data Analysis
+
+## Customer Sentiment
+
+## Telemetry
