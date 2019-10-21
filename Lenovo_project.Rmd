@@ -20,8 +20,12 @@ source('src_lenovo_project.R')
 ```{r}
 nps.main <-read.csv("RawData/Lenovo_Survey_Data_pNPS_Rev2.csv",header = TRUE)
 cis.main <- read.csv("RawData/CID_Web_Sentiment.csv", header = TRUE)
+nps.main <- nps.main[complete.cases(nps.main$Product),]
+cis.main <- cis.main[complete.cases(cis.main$Product),]
 nps.main <- mutate(nps.main, Product = tolower(as.character(Product)), Date.Survey = as.Date(Date.Survey, format = "%m/%d/%Y"), Ownership.Period = as.character(Ownership.Period))
 cis.main <- mutate(cis.main, Product = tolower(as.character(Product)), Comment.Date = as.Date(Comment.Date, format = "%m/%d/%y"))
+
+# battery.life.main <- read.csv("RawData/Battery Life.")
 
 ```
 
@@ -40,10 +44,14 @@ cis.working <- mutate(cis.working, Product = tolower(as.character(Product)), Com
 
 nps.working <- select(nps.working, Date.Survey, Country, Product.NPS, Segment, Product, Ownership.Period)
 cis.working <- select(cis.working, comment_id, Comment.Date, Sentiment, Category, Stars.Rating, Business.Group, Product)
+# format.type = 1 # For PIS/NPS scores downsampled for each month and product
+# format.type = 2 # For PIS/NPS scores downsampled for each product
+pis.working <- calculate.PIS(cis.working = cis.working, format.type = 1)
+pnps.working <- calculate.NPS(nps.dataset = nps.working, format.type = 1)
 
-pis.working <- calculate.PIS(cis.working = cis.working)
-pnps.working <- calculate.NPS(nps.dataset = nps.working)
+```
 
+```{r}
 write.csv(pis.working, "RawData/cached_main_pis.csv")
 write.csv(pnps.working, "RawData/cached_main_pnps.csv")
 write.csv(pis.working[complete.cases(pis.working),], "RawData/cached_main_pis_clean.csv")
@@ -66,3 +74,28 @@ plt.pnps.ts <- ggplot(pnps.working[grep("ideapad 1",pnps.working$Product),], aes
 plt.pnps.ts
 ```
 
+## Downsampled for each product 
+
+```{r}
+pis.working <- calculate.PIS(cis.working = cis.working, format.type = 2)
+pnps.working <- calculate.NPS(nps.dataset = nps.working, format.type = 2)
+
+
+merged.working = merge(pis.working, pnps.working, by = "Product")
+ggplot(merged.working)+geom_point(aes(x = PIS, y = pNPS))+xlab("PIS")+ggtitle("Average pNPS over all Surveys")+ ylab("pNPS")+facet_grid(.~ownership.duration,scales = "free")
+```
+
+```{r}
+
+```
+
+
+Conclusions:
+
+- Majority of the observations are from witin three months of ownership.
+- Of the 
+  
+  
+  
+  
+  
