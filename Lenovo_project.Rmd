@@ -18,8 +18,8 @@ source('src_lenovo_project.R')
 # Extraction
 
 ```{r}
-nps.main <-read.csv("../RawData/Lenovo_Survey_Data_pNPS_Rev2.csv",header = TRUE)
-cis.main <- read.csv("../RawData/CID_Web_Sentiment.csv", header = TRUE)
+nps.main <-read.csv("RawData/Lenovo_Survey_Data_pNPS_Rev2.csv",header = TRUE)
+cis.main <- read.csv("RawData/CID_Web_Sentiment.csv", header = TRUE)
 nps.main <- mutate(nps.main, Product = tolower(as.character(Product)), Date.Survey = as.Date(Date.Survey, format = "%m/%d/%Y"))
 cis.main <- mutate(cis.main, Product = tolower(as.character(Product)), Comment.Date = as.Date(Comment.Date, format = "%m/%d/%y"))
 
