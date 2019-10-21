@@ -1,0 +1,65 @@
+---
+title: "Working Analysis"
+author: "ISE 560"
+date: "October 21, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width = "50%")
+knitr::opts_chunk$set(fig.align = "center")
+
+library(tidyverse)
+
+source("../src_lenovo_project.R")
+```
+
+# Sentiment Data
+
+## SMB Products
+```{r}
+# Read in all sentiment data
+sentiment <- read.csv("../RawData/CID_Web_Sentiment.csv")
+
+# Filter SMB data
+sentiment.smb <- sentiment %>%
+  filter(Business.Group == "LENOVO - SMB") 
+
+# Calculate PSI by month for all SMB products
+smb.psi <- sentiment.smb %>%
+  group_by(year = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "year"),
+           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))
+
+smb.psi %>%
+  ggplot() +
+  geom_line(aes(x=month, y=psi)) +
+  labs(title="PSI for all SMB Products")
+
+```
+
+## Commercial Products
+```{r}
+# Filter Commercial data
+sentiment.comm <- sentiment %>%
+  filter(Business.Group == "LENOVO - COMMERCIAL") 
+
+# Calculate PSI by month for all Commercial products
+comm.psi <- sentiment.comm %>%
+  group_by(year = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "year"),
+           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))
+
+comm.psi %>%
+  ggplot() +
+  geom_line(aes(x=month, y=psi))
+```
+
+
