@@ -34,7 +34,7 @@ calculate.PIS <- function(cis.working) {
       row = row + 1
     }
   }
-  pis.working$Survey.time =  format(lubridate::ymd(paste0(year_month = pis.working$Survey.time, day = "30")), "%Y-%m")
+  pis.working$Survey.time =  format(lubridate::ymd(paste0(year_month = pis.working$Comment.time, day = "30")), "%Y-%m")
   return(pis.working)
 }
 
