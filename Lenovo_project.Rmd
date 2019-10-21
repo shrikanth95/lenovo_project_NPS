@@ -10,8 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library("dplyr")
 library("lubridate")
 library(ggplot2)
+library(cowplot)
 source('src_lenovo_project.R')
-#setwd("D:/Work/NC State/Fall 2019/ISE 560 Stochastic Models for Industrial Engineering/Lenovo Project")
 
 ```
 
@@ -20,13 +20,17 @@ source('src_lenovo_project.R')
 ```{r}
 nps.main <-read.csv("RawData/Lenovo_Survey_Data_pNPS_Rev2.csv",header = TRUE)
 cis.main <- read.csv("RawData/CID_Web_Sentiment.csv", header = TRUE)
-nps.main <- mutate(nps.main, Product = tolower(as.character(Product)), Date.Survey = as.Date(Date.Survey, format = "%m/%d/%Y"))
+nps.main <- mutate(nps.main, Product = tolower(as.character(Product)), Date.Survey = as.Date(Date.Survey, format = "%m/%d/%Y"), Ownership.Period = as.character(Ownership.Period))
 cis.main <- mutate(cis.main, Product = tolower(as.character(Product)), Comment.Date = as.Date(Comment.Date, format = "%m/%d/%y"))
 
 ```
 
+
+
 ```{r}
-nps.working <- nps.main#[grep("ideapad 1", nps.main$Product),]
+ownership.durations <- c("Less than 3 months", "Between 3 - 6 months", "Between 7 – 12 months","More than 12 months", "Not available")
+
+nps.working <- nps.main#[grep("ideapad 1", nps.main$Product),]#[nps.main$Ownership.Period,]
 cis.working <- cis.main#[grep("ideapad 1",cis.main$Product),]
 
 nps.working$Product.NPS <- as.numeric(levels(nps.working$Product.NPS))[nps.working$Product.NPS]
@@ -34,13 +38,31 @@ nps.working$Product.NPS <- as.numeric(levels(nps.working$Product.NPS))[nps.worki
 nps.working <- mutate(nps.working, Product = tolower(as.character(Product)), Date.Survey = as.Date(Date.Survey, format = "%m/%d/%Y"))
 cis.working <- mutate(cis.working, Product = tolower(as.character(Product)), Comment.Date = as.Date(Comment.Date, format = "%m/%d/%y"))
 
-nps.working <- select(nps.working, Date.Survey, Country, Product.NPS, Segment, Product)
+nps.working <- select(nps.working, Date.Survey, Country, Product.NPS, Segment, Product, Ownership.Period)
 cis.working <- select(cis.working, comment_id, Comment.Date, Sentiment, Category, Stars.Rating, Business.Group, Product)
 
 pis.working <- calculate.PIS(cis.working = cis.working)
-pnps.working <- calculate.NPS(nps.working = nps.working)
-# ggplot(main.df)+geom_histogram(aes(x = ))
-# ggplot(main.df)+geom_point(aes(x = Stars.Rating,y = Product.NPS, color = ))+facet_wrap(Month~Segment)
-# Test
+pnps.working <- calculate.NPS(nps.dataset = nps.working)
+
+write.csv(pis.working, "RawData/cached_main_pis.csv")
+write.csv(pnps.working, "RawData/cached_main_pnps.csv")
+write.csv(pis.working[complete.cases(pis.working),], "RawData/cached_main_pis_clean.csv")
+write.csv(pnps.working[complete.cases(pnps.working),], "RawData/cached_main_pnps_clean.csv")
+
+```
+
+## Monthly evolution of sentiments for ideapad 100 family
+
+```{r}
+pis.working = read.csv("RawData/cached_main_pis.csv")
+pnps.working = read.csv("RawData/cached_main_pnps.csv")
+
+pis.working$Comment.time =  ymd(paste0(year_month = as.character(pis.working$Comment.time), day = "30"))
+pnps.working$Survey.time =  ymd(paste0(year_month = as.character(pnps.working$Survey.time), day = "30"))
+
+plt.pis.ts <- ggplot(pis.working[grep("ideapad 1",pis.working$Product),], aes(x = Comment.time, y = PIS, color = Product))+geom_line()+ggtitle("Sentiment Time series for IdeaPad 100 Family")
+plt.pis.ts
+plt.pnps.ts <- ggplot(pnps.working[grep("ideapad 1",pnps.working$Product),], aes(x = Survey.time, y = pNPS, color = Product))+facet_grid(.~ownership.duration)+geom_line()+ggtitle("NPS Survey time series for IdeaPad 100 Family")
+plt.pnps.ts
 ```
 

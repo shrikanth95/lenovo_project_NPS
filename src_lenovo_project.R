@@ -6,7 +6,7 @@ library(lubridate)
 # Output: PIS scores for each available product and year
 
 calculate.PIS <- function(cis.working) {
-
+  
   cis.working$Comment.time =  format(cis.working$Comment.Date, "%Y-%m")
   
   list.products = unique(cis.working$Product)
@@ -34,6 +34,7 @@ calculate.PIS <- function(cis.working) {
       row = row + 1
     }
   }
+  pis.working$Survey.time =  format(lubridate::ymd(paste0(year_month = pis.working$Survey.time, day = "30")), "%Y-%m")
   return(pis.working)
 }
 
@@ -41,36 +42,45 @@ calculate.PIS <- function(cis.working) {
 # Input: pNPS dataset
 # Output: pNPS scores for each available product and year
 
-calculate.NPS <- function(nps.working) {
+calculate.NPS <- function(nps.dataset) {
   
-  nps.working$Comment.time =  format(nps.working$Date.Survey, "%Y-%m")
-  list.products = unique(nps.working$Product)
-  list.comment.time = unique(nps.working$Comment.time)
-  len.working = length(list.products)*length(list.comment.time)
-  
-  pnps.working <- data.frame(Product = character(len.working), 
-                            pNPS = numeric(len.working), 
-                            Comment.time = character(len.working),
-                            sample.size = numeric(len.working),
-                            stringsAsFactors = FALSE)
-  row = 1
-  for(prod in list.products){
-    for(comment.time in list.comment.time){
-      nps.slice = nps.working[(nps.working$Product == prod)&(nps.working$Comment.time == comment.time), ]
-      pnps.working$Product[row] = prod
-      pnps.working$Comment.time[row] = comment.time
-      pnps.working$sample.size[row] = nrow(nps.slice)
-      if(nrow(nps.slice)>2){ 
-        num.prom = nrow(nps.slice[(nps.slice$Product.NPS>8)&(nps.slice$Product.NPS<11),])
-        num.det = nrow(nps.slice[(nps.slice$Product.NPS>-1)&(nps.slice$Product.NPS<7),])
-        pnps.working$pNPS[row] = num.prom - num.det
+  durations <- c("Less than 3 months", "Between 3 - 6 months", "Between 7 – 12 months","More than 12 months", "Not available")
+  pnps.working.main <- data.frame()
+  nps.dataset$Survey.time =  format(nps.dataset$Date.Survey, "%Y-%m")
+  for(duration in durations){
+    nps.working = nps.dataset[nps.dataset$Ownership.Period == duration,]
+    list.products = unique(nps.working$Product)
+    list.survey.time = unique(nps.working$Survey.time)
+    len.working = length(list.products)*length(list.survey.time)
+    
+    pnps.working <- data.frame(Product = character(len.working), 
+                               pNPS = numeric(len.working), 
+                               Survey.time = character(len.working),
+                               sample.size = numeric(len.working),
+                               ownership.duration = rep(duration, len.working),
+                               stringsAsFactors = FALSE)
+    row = 1
+    for(prod in list.products){
+      for(survey.time in list.survey.time){
+        nps.slice = nps.working[(nps.working$Product == prod)&(nps.working$Survey.time == survey.time), ]
+        pnps.working$Product[row] = prod
+        pnps.working$Survey.time[row] = survey.time
+        pnps.working$sample.size[row] = nrow(nps.slice)
+        
+        if(nrow(nps.slice)>2){ 
+          num.prom = nrow(nps.slice[(nps.slice$Product.NPS>8)&(nps.slice$Product.NPS<11),])
+          num.det = nrow(nps.slice[(nps.slice$Product.NPS>-1)&(nps.slice$Product.NPS<7),])
+          pnps.working$pNPS[row] = num.prom - num.det
+        }
+        else{
+          pnps.working$pNPS[row] = NA
+          # pnps.working$bNPS[row] = -1
+        }
+        row = row + 1
       }
-      else{
-        pnps.working$pNPS[row] = NA
-        # pnps.working$bNPS[row] = -1
-      }
-      row = row + 1
     }
+    pnps.working.main = rbind(pnps.working.main, pnps.working)
   }
-  return(pnps.working)
+  pnps.working.main$Survey.time =  format(lubridate::ymd(paste0(year_month = pnps.working.main$Survey.time, day = "30")), "%Y-%m")
+  return(pnps.working.main)
 }
