@@ -11,7 +11,7 @@ library("dplyr")
 library("lubridate")
 library(ggplot2)
 source('src_lenovo_project.R')
-setwd("D:/Work/NC State/Fall 2019/ISE 560 Stochastic Models for Industrial Engineering/Lenovo Project")
+#setwd("D:/Work/NC State/Fall 2019/ISE 560 Stochastic Models for Industrial Engineering/Lenovo Project")
 
 ```
 
