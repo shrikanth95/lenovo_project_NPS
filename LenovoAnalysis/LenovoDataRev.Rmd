@@ -19,7 +19,11 @@ library(ggcorrplot)
 library(tidyverse)
 ```
 ```{r}
-my_data <- read_excel("LenovoSurveyRev.xlsx")
+
+
+# Read in all NPS data
+my_data <- read.csv("../RawData/Lenovo_Survey_Data_pNPS_Rev2.csv")
+
 
 ```
 
