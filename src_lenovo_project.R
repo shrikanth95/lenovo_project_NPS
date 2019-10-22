@@ -20,6 +20,7 @@ calculate.PIS <- function(cis.working, format.type = 1) {
     len.working = length(list.products)*length(list.comment.time)
     pis.working <- data.frame(Product = character(len.working), 
                               Comment.time = character(len.working),
+                              avg.star.rating = numeric(len.working),
                               PIS = numeric(len.working), 
                               sample.size = numeric(len.working),
                               stringsAsFactors = FALSE)
@@ -33,8 +34,11 @@ calculate.PIS <- function(cis.working, format.type = 1) {
         pis.working$Product[row] = prod
         pis.working$Comment.time[row] = comment.time
         pis.working$sample.size[row] = nrow(cis.slice)
-        if(is.numeric(num.neg)&is.numeric(num.pos)) 
+        if(is.numeric(num.neg)&is.numeric(num.pos)){
+          pis.working$avg.star.rating[row] = mean(cis.slice$Stars.Rating,na.rm = TRUE)
           pis.working$PIS[row] = (num.pos-num.neg)/(num.pos+num.neg)*10
+        }
+        
         else 
           pis.working$PIS[row] = -1
         row = row + 1
@@ -47,6 +51,7 @@ calculate.PIS <- function(cis.working, format.type = 1) {
     list.products = unique(cis.working$Product)
     len.working = length(list.products)
     pis.working <- data.frame(Product = character(len.working), 
+                              avg.star.rating = numeric(len.working),
                               PIS = numeric(len.working), 
                               sample.size = numeric(len.working),
                               stringsAsFactors = FALSE)
@@ -58,8 +63,10 @@ calculate.PIS <- function(cis.working, format.type = 1) {
       num.pos = length(which(cis.slice$Sentiment=="POSITIVE"))
       pis.working$Product[row] = prod
       pis.working$sample.size[row] = nrow(cis.slice)
-      if(is.numeric(num.neg)&is.numeric(num.pos)) 
+      if(is.numeric(num.neg)&is.numeric(num.pos)) {
         pis.working$PIS[row] = (num.pos-num.neg)/(num.pos+num.neg)*10
+        pis.working$avg.star.rating[row] = mean(cis.slice$Stars.Rating,na.rm = TRUE)
+      }
       else 
         pis.working$PIS[row] = -1
       row = row + 1
@@ -79,7 +86,7 @@ calculate.PIS <- function(cis.working, format.type = 1) {
 
 calculate.NPS <- function(nps.dataset, format.type = 1) {
   
-  durations <- c("Less than 3 months", "Between 3 - 6 months", "Between 7 – 12 months","More than 12 months", "Not available")
+  durations <- unique(nps.dataset$Ownership.Period)
   pnps.working.main <- data.frame()
   if(format.type == 1) {
     nps.dataset$Survey.time =  format(nps.dataset$Date.Survey, "%Y-%m")
@@ -104,7 +111,6 @@ calculate.NPS <- function(nps.dataset, format.type = 1) {
           pnps.working$Product[row] = prod
           pnps.working$Survey.time[row] = survey.time
           pnps.working$sample.size[row] = nrow(nps.slice)
-          
           if(nrow(nps.slice)>2){ 
             num.prom = nrow(nps.slice[(nps.slice$Product.NPS>8)&(nps.slice$Product.NPS<11),])
             num.det = nrow(nps.slice[(nps.slice$Product.NPS>-1)&(nps.slice$Product.NPS<7),])
