@@ -2,7 +2,7 @@
 title: "Working Analysis"
 author: "ISE 560"
 date: "October 21, 2019"
-output: pdf_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -68,6 +68,18 @@ ggplot() +
 
 ```
 
+## Product List
+```{r}
+# Get set of SMB products
+smb.prods.df1 <- sort(toupper(unique(as.character(sentiment.smb$Product))))
+smb.prods.df2 <- sort(toupper(unique(as.character(survey.smb$Product))))
+smb.prods <- data.frame(name = I(unique(c(smb.prods.df1, smb.prods.df2)))) %>%
+  mutate(have_sentiment = name %in% smb.prods.df1,
+         have_survey = name %in% smb.prods.df2)
+
+smb.prods
+```
+
 # Commercial Products
 ```{r}
 # Filter Commercial data
@@ -103,3 +115,15 @@ ggplot() +
 ```
 
 
+
+## Product List
+```{r}
+# Get set of Commercial products
+comm.prods.df1 <- sort(toupper(unique(as.character(sentiment.comm$Product))))
+comm.prods.df2 <- sort(toupper(unique(as.character(survey.comm$Product))))
+comm.prods <- data.frame(name = I(unique(c(comm.prods.df1, comm.prods.df2)))) %>%
+  mutate(have_sentiment = name %in% comm.prods.df1,
+         have_survey = name %in% comm.prods.df2)
+
+comm.prods
+```
