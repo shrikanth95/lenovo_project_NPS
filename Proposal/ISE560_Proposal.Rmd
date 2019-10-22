@@ -32,6 +32,9 @@ library(tidyverse)
 
 # Key Variables and Parameters
 
+  - Three variables of interest
+    - ferr
+
 # Critical Uncertainties
 
 # Markov Decision Process
