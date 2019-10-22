@@ -17,13 +17,24 @@ library(tidyverse)
 source("../src_lenovo_project.R")
 ```
 
-# Sentiment Data
 
-## SMB Products
 ```{r}
 # Read in all sentiment data
 sentiment <- read.csv("../RawData/CID_Web_Sentiment.csv")
 
+# Read in all NPS data
+survey <- read.csv("../RawData/Lenovo_Survey_Data_pNPS_Rev2.csv")
+
+# Convert Product.NPS to a numeric values
+
+
+# TO DO: nps$Segment needs some cleaning
+# Need to handle "blanks", "-" and convert "Consumer" to "Lenovo-Consumer" for Segmentt
+# Need to handle "-" for Product.NPS
+```
+
+# SMB Products
+```{r}
 # Filter SMB data
 sentiment.smb <- sentiment %>%
   filter(Business.Group == "LENOVO - SMB") 
@@ -36,14 +47,28 @@ smb.psi <- sentiment.smb %>%
             neg = sum(Sentiment == "NEGATIVE")) %>%
   mutate(psi = 100 * (pos - neg)/(pos +  neg))
 
-smb.psi %>%
-  ggplot() +
-  geom_line(aes(x=month, y=psi)) +
-  labs(title="PSI for all SMB Products")
+survey.smb <- survey %>%
+  filter(Segment == "Lenovo - SMB") %>%
+  mutate(NPS = as.numeric(as.character(Product.NPS))) %>%
+  drop_na(NPS)
+
+# Calculate NPS by month for all SMB producs
+smb.nps <- survey.smb %>%
+  group_by(year = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "year"),
+           month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total)
+
+ggplot() +
+  geom_line(data = smb.psi, mapping = aes(x=month, y=psi, color="PSI")) +
+  geom_line(data = smb.nps, mapping = aes(x=month, y=nps, color="NPS")) +
+  labs(title="NPS & PSI for all SMB Products")
 
 ```
 
-## Commercial Products
+# Commercial Products
 ```{r}
 # Filter Commercial data
 sentiment.comm <- sentiment %>%
@@ -57,9 +82,24 @@ comm.psi <- sentiment.comm %>%
             neg = sum(Sentiment == "NEGATIVE")) %>%
   mutate(psi = 100 * (pos - neg)/(pos +  neg))
 
-comm.psi %>%
-  ggplot() +
-  geom_line(aes(x=month, y=psi))
+survey.comm <- survey %>%
+  filter(Segment == "Lenovo - Commercial") %>%
+  mutate(NPS = as.numeric(as.character(Product.NPS))) %>%
+  drop_na(NPS)
+
+# Calculate NPS by month for all Commercial producs
+comm.nps <- survey.comm %>%
+  group_by(year = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "year"),
+           month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total)
+
+ggplot() +
+  geom_line(data = comm.psi, mapping = aes(x=month, y=psi, color="PSI")) +
+  geom_line(data = comm.nps, mapping = aes(x=month, y=nps, color="NPS")) +
+  labs(title="NPS & PSI for all Commercial Products")
 ```
 
 
