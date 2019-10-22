@@ -38,6 +38,12 @@ library(tidyverse)
 
 # Preliminary Data Analysis
 
+Segment    | Total Products | Products w/both Sentiment and NPS | w/Battery | w/Wifi | w/Driver Reliabity
+---------- | -------------- | -------------------- | ------- | ---- | -----------
+Consumer   | TBD            |      73              | TBD     | TBD  |     TBD
+Commercial | 238            |      46              | TBD     | TBD  |     TBD
+SMB        |   59           |      18              | TBD     | TBD  |     TBD
+
 ## Customer Sentiment
 
 ## Telemetry
