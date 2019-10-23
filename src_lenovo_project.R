@@ -1,16 +1,16 @@
 library(lubridate)
 
 ## Functions used for the lenovo project in ISE560
-# Description: Calculates the PIS of the sentiment data with each product. NOTE  "IDEAPAD 120S 14" and "IDEAPAD 120S 15" are considered to be two different products
+# Description: Calculates the psi of the sentiment data with each product. NOTE  "IDEAPAD 120S 14" and "IDEAPAD 120S 15" are considered to be two different products
 # Input: 
 #   - CIS dataset
 #   - format.type: 
 #       - use 1 for scores downsampled for each product and time(Year-Month); 
 #       - use 2 for scores downsampled for each product
 # Output: 
-#   - PIS scores for each format
+#   - psi scores for each format
 
-calculate.PIS <- function(cis.working, format.type = 1) {
+calculate.PSI <- function(cis.working, format.type = 1) {
   
   if(format.type == 1) {
     cis.working$Comment.time =  format(cis.working$Comment.Date, "%Y-%m")
@@ -18,10 +18,10 @@ calculate.PIS <- function(cis.working, format.type = 1) {
     list.products = unique(cis.working$Product)
     
     len.working = length(list.products)*length(list.comment.time)
-    pis.working <- data.frame(Product = character(len.working), 
+    psi.working <- data.frame(Product = character(len.working), 
                               Comment.time = character(len.working),
                               avg.star.rating = numeric(len.working),
-                              PIS = numeric(len.working), 
+                              psi = numeric(len.working), 
                               sample.size = numeric(len.working),
                               stringsAsFactors = FALSE)
     row = 1
@@ -31,28 +31,28 @@ calculate.PIS <- function(cis.working, format.type = 1) {
         cis.slice = cis.working[(cis.working$Product == prod)&(cis.working$Comment.time == comment.time), ]
         num.neg = length(which(cis.slice$Sentiment=="NEGATIVE"))
         num.pos = length(which(cis.slice$Sentiment=="POSITIVE"))
-        pis.working$Product[row] = prod
-        pis.working$Comment.time[row] = comment.time
-        pis.working$sample.size[row] = nrow(cis.slice)
+        psi.working$Product[row] = prod
+        psi.working$Comment.time[row] = comment.time
+        psi.working$sample.size[row] = nrow(cis.slice)
         if(is.numeric(num.neg)&is.numeric(num.pos)){
-          pis.working$avg.star.rating[row] = mean(cis.slice$Stars.Rating,na.rm = TRUE)
-          pis.working$PIS[row] = (num.pos-num.neg)/(num.pos+num.neg)*10
+          psi.working$avg.star.rating[row] = mean(cis.slice$Stars.Rating,na.rm = TRUE)
+          psi.working$psi[row] = (num.pos-num.neg)/(num.pos+num.neg)*10
         }
         
         else 
-          pis.working$PIS[row] = -1
+          psi.working$psi[row] = -1
         row = row + 1
       }
     }
-    pis.working$Comment.time =  format(lubridate::ymd(paste0(year_month = pis.working$Comment.time, day = "30")), "%Y-%m")
+    psi.working$Comment.time =  format(lubridate::ymd(paste0(year_month = psi.working$Comment.time, day = "30")), "%Y-%m")
   }
   else{
     
     list.products = unique(cis.working$Product)
     len.working = length(list.products)
-    pis.working <- data.frame(Product = character(len.working), 
+    psi.working <- data.frame(Product = character(len.working), 
                               avg.star.rating = numeric(len.working),
-                              PIS = numeric(len.working), 
+                              psi = numeric(len.working), 
                               sample.size = numeric(len.working),
                               stringsAsFactors = FALSE)
     row = 1
@@ -61,18 +61,18 @@ calculate.PIS <- function(cis.working, format.type = 1) {
       cis.slice = cis.working[(cis.working$Product == prod), ]
       num.neg = length(which(cis.slice$Sentiment=="NEGATIVE"))
       num.pos = length(which(cis.slice$Sentiment=="POSITIVE"))
-      pis.working$Product[row] = prod
-      pis.working$sample.size[row] = nrow(cis.slice)
+      psi.working$Product[row] = prod
+      psi.working$sample.size[row] = nrow(cis.slice)
       if(is.numeric(num.neg)&is.numeric(num.pos)) {
-        pis.working$PIS[row] = (num.pos-num.neg)/(num.pos+num.neg)*10
-        pis.working$avg.star.rating[row] = mean(cis.slice$Stars.Rating,na.rm = TRUE)
+        psi.working$psi[row] = (num.pos-num.neg)/(num.pos+num.neg)*100
+        psi.working$avg.star.rating[row] = mean(cis.slice$Stars.Rating,na.rm = TRUE)
       }
       else 
-        pis.working$PIS[row] = -1
+        psi.working$psi[row] = -1
       row = row + 1
     }
   }
-  return(pis.working)
+  return(psi.working)
 }
 
 # Description: Calculates the pNPS from NPS surveys for each product. NOTE  "IDEAPAD 120S 14" and "IDEAPAD 120S 15" are considered to be two different products

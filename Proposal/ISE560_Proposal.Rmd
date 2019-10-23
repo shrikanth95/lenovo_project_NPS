@@ -32,9 +32,15 @@ library(tidyverse)
 
 # Key Variables and Parameters
 
-  - Three variables of interest
-    - ferr
+Identify and describe critical uncertainties within the model with regards to parameters and decision variables. Identify those uncertainties that may be dynamic (stochastic). 
 
+  - Three variables of interest
+    - pNPS 
+    - PSI and Star rating
+    - Telemetry
+  - Discretize probabilities. 
+  - We are given time series data for two years.  
+  
 # Critical Uncertainties
 
 # Markov Decision Process
