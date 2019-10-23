@@ -49,10 +49,30 @@ Identify and describe critical uncertainties within the model with regards to pa
 
 Segment    | Total Products | Products w/both Sentiment and NPS | w/Battery | w/Wifi | w/Driver Reliabity
 ---------- | -------------- | -------------------- | ------- | ---- | -----------
-Consumer   | TBD            |      73              | TBD     | TBD  |     TBD
+Consumer   | 487            |      74              | TBD     | TBD  |     TBD
 Commercial | 238            |      46              | TBD     | TBD  |     TBD
 SMB        |   59           |      18              | TBD     | TBD  |     TBD
+
+Figure \ref{fig:overall_summary} provides a broad overview of the trends within pNPS, PIS and the star rating.  Note that pNPS was calculated using the given formula.  PIS was calculated by:
+\begin{equation}
+PIS = \frac{\text{Positive mentions}- \text{Negative mentions}}{\text{Positive mentions}+ \text{Negative mentions}}\times 100.
+\end{equation}
+The period of interest is one month.  Star ratings are averaged over a month for each segment. In order to observe trends, star rating is scaled by a multiplicative factor of 20.  Further note that as ownership durating is avaiable only for the surveys, the PIS and Star rating per segment will be identical in each facet.  
+
+\begin{figure}[t]
+\centering
+\includegraphics[width = 0.48\textwidth]{Figures/all_metric_summary_consumer.pdf}
+\includegraphics[width = 0.48\textwidth]{Figures/all_metric_summary_commertial_SMB.pdf}
+\caption{Trends in the pNPS, PIS and average star rating for downsampling over 1-month intervals.}
+\label{fig:overall_summary}
+\end{figure}
+
 
 ## Customer Sentiment
 
 ## Telemetry
+
+
+
+
+
