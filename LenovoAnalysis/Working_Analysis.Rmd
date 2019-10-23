@@ -2,7 +2,9 @@
 title: "Working Analysis"
 author: "ISE 560"
 date: "October 21, 2019"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -73,7 +75,7 @@ survey.smb <- survey.smb.all %>%
 
 # Calculate PSI by month for SMB products
 smb.psi <- sentiment.smb %>%
-  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%Y"), unit = "month")) %>%
+  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
             neg = sum(Sentiment == "NEGATIVE")) %>%
   mutate(psi = 100 * (pos - neg)/(pos +  neg))
