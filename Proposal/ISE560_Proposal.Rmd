@@ -7,6 +7,7 @@ header-includes:
    - \setmainfont{Times New Roman}
    - \usepackage{setspace}
    - \onehalfspacing
+   - \usepackage{enumitem}
 output: 
   pdf_document:
     latex_engine: xelatex
@@ -14,6 +15,7 @@ output:
     fig_caption: true
 fontsize: 12pt
 geometry: margin=1in 
+urlcolor: blue
 ---
 
 ```{r echo=FALSE, results='hide', message=FALSE, warning=FALSE}
@@ -28,7 +30,22 @@ library(tidyverse)
 
 ## Model
 
+We propose developing a linear regression model where Product Sentiment Index (PSI) is one of the explanatory variables, and PSI will be modeled as a stochastic process.  Based on a preliminary analysis of the data (see Section \ref{data_analysis}), star rating, product series and telemetry data are potential explanatory variables.   
+
 ## Metrics
+
+We propose using k-fold cross validation to evaluate candidate models:
+\begin{enumerate}[nosep]
+  \item Randomly shuffle the data and split into k-groups
+  \item For each group
+  \begin{enumerate}[nosep]
+    \item Reserve the current group as the test data set
+    \item Fit candidate model(s) to the remaining k-1 data sets and perform variable selection
+    \item Assess model fit with the test data set
+  \end{enumerate}
+\end{enumerate}
+
+Assuming we develop multiple candidate models, then we will use the results from the cross-validation to  make a final recommendation.  This approach gives us additional flexibility; for example, the final recommendation may be different models with different explanatory variables for the Commercial versus Consumer segments if that yields better performance compared to the same model for both business segments.
 
 # NPS & Telemetry
    Net Promotor Score (NPS) is a management tool that measures customer satisfaction, as well as customer loyalty. The score is based entirely on the customer’s response to the question “How likely are you to recommend this product (or service) to someone else?” Their response is a number on the scale of zero (being the least likely) to ten (being the most likely). Companies then categorize the customer’s based off the scores they inputted. If a customer’s NPS response score was between a nine and a ten, the customer is called a promoter. If the customer’s response was low, between zero and six, they are called a detractor. The company’s NPS score is calculated by subtracting the percentage of detractors from the percentage of promoters. 
@@ -53,13 +70,14 @@ Identify and describe critical uncertainties within the model with regards to pa
 
 # Markov Decision Process
 
-# Preliminary Data Analysis
+# Preliminary Data Analysis \label{data_analysis}
 
-Segment    | Total Products | Products w/both Sentiment and NPS | w/Battery | w/Wifi | w/Driver Reliabity
----------- | -------------- | -------------------- | ------- | ---- | -----------
-Consumer   | 487            |      74              | TBD     | TBD  |     TBD
-Commercial | 238            |      46              | TBD     | TBD  |     TBD
-SMB        |   59           |      18              | TBD     | TBD  |     TBD
+
+Segment    | Total Products | w/Sentiment and NPS | w/Battery 
+---------- | -------------- | ------------ | ------- 
+Consumer   | 487            |      74          | TBD     
+Commercial | 238            |      46          | TBD     
+SMB        |   59           |      18          | TBD     
 
 Figure \ref{fig:overall_summary} provides a broad overview of the trends within pNPS, PIS and the star rating.  Note that pNPS was calculated using the given formula.  PIS was calculated by:
 
