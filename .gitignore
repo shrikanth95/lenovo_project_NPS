@@ -2,3 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+
+# Also prevent inadvertent checkin of pdf & html files since these are auto-generated from Rmd files
+*.pdf
+*.html
