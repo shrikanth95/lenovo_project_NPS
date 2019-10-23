@@ -69,7 +69,7 @@ Identify and describe critical uncertainties within the model with regards to pa
 # Critical Uncertainties
 
 # Markov Decision Process
-
+The states that can be used to develop a Markov Chain include NPS states and star rating states. We have categorized NPS into five states. These five states are very low, moderately low, normal, moderately high, and very high. We will call a NPS score in the range of -100 to 8, very low. Scores that fall in the range of 8-35 will be considered low. The normal NPS range will be from 35 to 45 and the range of 45-60 will be considered high. Lastly, a NPS score that falls between 60-100 will be considered very high. The star ratings are rated on a 1-5 scale. Star ratings that are either a 1 or 2 will be considered a negative state, 3 will be considered a neutral state, and 4 or 5 will be considered a positive state.
 # Preliminary Data Analysis \label{data_analysis}
 
 
