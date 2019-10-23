@@ -136,7 +136,7 @@ survey.comm <- survey.comm.all %>%
 
 # Calculate PSI by month for all Commercial products
 comm.psi.month <- sentiment.comm %>%
-  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%Y"), unit = "month")) %>%
+  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
             neg = sum(Sentiment == "NEGATIVE")) %>%
   mutate(psi = 100 * (pos - neg)/(pos +  neg))
@@ -158,7 +158,7 @@ ggplot() +
 ```{r}
 # Calculate PSI by week for all Commercial products
 comm.psi.week <- sentiment.comm %>%
-  group_by(week = floor_date(as.Date(Comment.Date, format = "%m/%d/%Y"), unit = "week")) %>%
+  group_by(week = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
             neg = sum(Sentiment == "NEGATIVE")) %>%
   mutate(psi = 100 * (pos - neg)/(pos +  neg))
@@ -182,7 +182,7 @@ ggplot() +
 # Calculate PSI by month and by product
 comm.psi.month_prod <- sentiment.comm %>%
   group_by(ProductName,
-           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%Y"), unit = "month")) %>%
+           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
             neg = sum(Sentiment == "NEGATIVE")) %>%
   mutate(psi = 100 * (pos - neg)/(pos +  neg))
@@ -224,7 +224,7 @@ tmp2 <- left_join(sentiment.comm, tmp1, by=c("ProductName"))
 
 comm.psi.month_series <- tmp2 %>%
   group_by(SeriesName,
-           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%Y"), unit = "month")) %>%
+           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
             neg = sum(Sentiment == "NEGATIVE")) %>%
   mutate(psi = 100 * (pos - neg)/(pos +  neg))
