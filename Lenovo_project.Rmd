@@ -21,7 +21,7 @@ source('src_lenovo_project.R')
 nps.main <-read.csv("RawData/Lenovo_Survey_Data_pNPS_Rev2.csv",header = TRUE)
 cis.main <- read.csv("RawData/CID_Web_Sentiment.csv", header = TRUE)
 battery.life.main <- read.csv("RawData/Battery Life.csv", header = TRUE)
-ownership.durations <- c("Less than 3 months", "Between 3 - 6 months", "Between 7 – 12 months","More than 12 months")
+ownership.durations <- c("Less than 3 months","More than 12 months","Between 3 – 6 months","Between 7 – 12 months")
 
 nps.main <- nps.main[complete.cases(nps.main$Product),]
 cis.main <- cis.main[complete.cases(cis.main$Product),]
@@ -29,15 +29,15 @@ nps.main <- mutate(nps.main, Product = tolower(as.character(Product)), Date.Surv
 cis.main <- mutate(cis.main, Product = tolower(as.character(Product)), Comment.Date = as.Date(Comment.Date, format = "%m/%d/%y"), Stars.Rating = as.numeric(Stars.Rating))
 
 # Choosing the consumer segment
-nps.main <- nps.main[!(nps.main$Segment == "Consumer")|!(nps.main$Segment == "Lenovo - Consumer"),]#[nps.main$Ownership.Period,]
-cis.main <- cis.main %>% filter(Business.Group  != "LENOVO - CONSUMER")
+nps.main <- nps.main[(nps.main$Segment == "Consumer")|(nps.main$Segment == "Lenovo - Consumer"),]#[nps.main$Ownership.Period,]
+cis.main <- cis.main %>% filter(Business.Group  == "LENOVO - CONSUMER")
 
 #Choosing products that are common to both
 product.list = unique(nps.main$Product)
 cis.main = cis.main[cis.main$Product %in% product.list,]
 product.list = unique(cis.main$Product)
 nps.main = nps.main[nps.main$Product %in% product.list,]
-
+unique(nps.main$Ownership.Period)
 ```
 
 # Calcualte pNPS according to week
@@ -45,7 +45,7 @@ nps.main = nps.main[nps.main$Product %in% product.list,]
 ```{r}
 pnps.working.week.all <- data.frame()
 for(duration in ownership.durations){
-  pnps.working.week <- pnps.working.week %>%
+  pnps.working.week.all <- pnps.working.week.all %>%
     rbind(nps.main[nps.main$Ownership.Period==duration,]%>%
             group_by(week = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "week")) %>%
             summarise(promoter = sum(Product.NPS >= 9),
@@ -54,7 +54,7 @@ for(duration in ownership.durations){
             mutate(nps = 100 * (promoter - detractor) / total,
                    Ownership.period = duration))
 }
-unique(pnps.working.week$Ownership.period)
+
 psi.working.week.all <- cis.main %>%
   group_by(week = floor_date(Comment.Date, unit = "week")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
@@ -62,7 +62,7 @@ psi.working.week.all <- cis.main %>%
             avg.star = mean(Stars.Rating)) %>%
   mutate(psi = 100 * (pos - neg)/(pos +  neg))
 
-
+unique(pnps.working.week.all$Ownership.period)
 ```
 
 # Calcualte pNPS according to Month
@@ -99,36 +99,13 @@ plt <- ggplot() +
   geom_line(data = pnps.working.month.all, mapping = aes(x=month, y=nps, color="NPS")) +
   geom_line(data = psi.working.month.all, mapping = aes(x=month, y=psi, color="PSI"))+
   geom_line(data = psi.working.month.all, mapping = aes(x=month, y=avg.star*20, color="Star Rating * 20"))+
-  facet_grid(.~Ownership.period)+
-  labs(title="NPS, PSI and Star Rating for All Commertial and SMB Products", color = "Metrics:")+ylab("")+xlab("Time")+
+  facet_wrap(.~Ownership.period,nrow = 2)+
+  labs(title="NPS, PSI and Star Rating for All Consumer Products", color = "Metrics:")+ylab("")+xlab("Time")+
   theme(legend.position = "bottom")
-  ggsave(plot = plt,filename = "Proposal/Figures/all_metric_summary_not_consumer.pdf",width = 12, height = 4,units = "in")
+  ggsave(plot = plt,filename = "Proposal/Figures/all_metric_summary_consumer.pdf",width = 8, height = 4,units = "in")
 ```
 
 
-# Calculation of
-
-```{r}
-
-
-nps.working <- select(nps.working, Date.Survey, Country, Product.NPS, Segment, Product, Ownership.Period)
-cis.working <- select(cis.working, comment_id, Comment.Date, Sentiment, Category, Stars.Rating, Business.Group, Product)
-# format.type = 1 # For psi/NPS scores downsampled for each month and product
-# format.type = 2 # For psi/NPS scores downsampled for each product
-psi.working <- calculate.PSI(cis.working = cis.working, format.type = 1)
-pnps.working <- calculate.NPS(nps.dataset = nps.working, format.type = 1)
-
-```
-
-
-
-```{r}
-write.csv(psi.working, "RawData/cached_main_psi.csv")
-write.csv(pnps.working, "RawData/cached_main_pnps.csv")
-write.csv(psi.working[complete.cases(psi.working),], "RawData/cached_main_psi_clean.csv")
-write.csv(pnps.working[complete.cases(pnps.working),], "RawData/cached_main_pnps_clean.csv")
-
-```
 
 ## Monthly evolution of sentiments
 

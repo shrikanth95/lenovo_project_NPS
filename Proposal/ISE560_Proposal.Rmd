@@ -68,8 +68,8 @@ The period of interest is one month.  Star ratings are averaged over a month for
 \begin{figure}[t]
 \centering
 \includegraphics[width = 0.48\textwidth]{Figures/all_metric_summary_consumer.pdf}
-\includegraphics[width = 0.48\textwidth]{Figures/all_metric_summary_commertial_SMB.pdf}
-\caption{Trends in the pNPS, PIS and average star rating for downsampling over 1-month intervals.}
+\includegraphics[width = 0.48\textwidth]{Figures/all_metric_summary_commercial.pdf}
+\caption{Trends in the pNPS, PIS and average star rating when downsamped at 1-month intervals.}
 \label{fig:overall_summary}
 \end{figure}
 
