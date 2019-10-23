@@ -58,7 +58,7 @@ Figure \ref{fig:overall_summary} provides a broad overview of the trends within 
 PIS = \frac{\text{Positive mentions}- \text{Negative mentions}}{\text{Positive mentions}+ \text{Negative mentions}}\times 100.
 \end{equation}
 The period of interest is one month.  Star ratings are averaged over a month for each segment. In order to observe trends, star rating is scaled by a multiplicative factor of 20.  Further note that as ownership durating is avaiable only for the surveys, the PIS and Star rating per segment will be identical in each facet.  
-
+  
 \begin{figure}[t]
 \centering
 \includegraphics[width = 0.48\textwidth]{Figures/all_metric_summary_consumer.pdf}
