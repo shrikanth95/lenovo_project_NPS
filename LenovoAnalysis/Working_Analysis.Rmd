@@ -73,7 +73,7 @@ survey.smb <- survey.smb.all %>%
 
 # Calculate PSI by month for SMB products
 smb.psi <- sentiment.smb %>%
-  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%Y"), unit = "month")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
             neg = sum(Sentiment == "NEGATIVE")) %>%
   mutate(psi = 100 * (pos - neg)/(pos +  neg))
@@ -102,11 +102,13 @@ ggplot() +
 # Filter Commercial data
 sentiment.comm.all <- sentiment %>%
   filter(Business.Group == "LENOVO - COMMERCIAL") %>%
-  mutate(ProductName = I(toupper(as.character(Product))))
+  mutate(ProductName = I(toupper(as.character(Product)))) 
+
 
 survey.comm.all <- survey %>%
   filter(Segment == "Lenovo - Commercial") %>%
-  mutate(ProductName = I(toupper(as.character(Product)))) %>%
+  mutate(ProductName = I(toupper(as.character(Product))), 
+         SeriesName = I(toupper(as.character(Series)))) %>%
   mutate(NPS = as.numeric(as.character(Product.NPS))) %>%
   drop_na(NPS)
 
@@ -134,7 +136,7 @@ survey.comm <- survey.comm.all %>%
 
 # Calculate PSI by month for all Commercial products
 comm.psi.month <- sentiment.comm %>%
-  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%Y"), unit = "month")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
             neg = sum(Sentiment == "NEGATIVE")) %>%
   mutate(psi = 100 * (pos - neg)/(pos +  neg))
@@ -156,7 +158,7 @@ ggplot() +
 ```{r}
 # Calculate PSI by week for all Commercial products
 comm.psi.week <- sentiment.comm %>%
-  group_by(week = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
+  group_by(week = floor_date(as.Date(Comment.Date, format = "%m/%d/%Y"), unit = "week")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
             neg = sum(Sentiment == "NEGATIVE")) %>%
   mutate(psi = 100 * (pos - neg)/(pos +  neg))
@@ -175,12 +177,12 @@ ggplot() +
   labs(title="NPS & PSI for all Commercial Products")
 ```
 
-```{r}
 
+```{r include=FALSE}
 # Calculate PSI by month and by product
 comm.psi.month_prod <- sentiment.comm %>%
   group_by(ProductName,
-           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%Y"), unit = "month")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
             neg = sum(Sentiment == "NEGATIVE")) %>%
   mutate(psi = 100 * (pos - neg)/(pos +  neg))
@@ -208,3 +210,44 @@ for (i in unique(tmp$ProductName))
 }
 ```
 
+
+```{r}
+# Calculate PSI by month and by Series
+# Series is in the NPS file but not sentiment file so we need
+# to do some massaging to match that data up first; 
+# this is kludgy but works 
+tmp1 <- survey.comm %>%
+  select(ProductName, SeriesName) %>%
+  unique()
+
+tmp2 <- left_join(sentiment.comm, tmp1, by=c("ProductName"))
+
+comm.psi.month_series <- tmp2 %>%
+  group_by(SeriesName,
+           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%Y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))
+
+# Calculate NPS by month and series
+comm.nps.month_series <- survey.comm %>%
+  group_by(SeriesName,
+           month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total)
+
+tmp <- merge(comm.nps.month_series, comm.psi.month_series, all=T) %>%
+  select(-promoter, -detractor, -total, -pos, -neg) %>%
+  gather(key = type, value=score, -SeriesName, -month) 
+
+for (i in unique(tmp$Series))
+{
+  print(ggplot(data=tmp[tmp$Series==i,],
+              mapping = aes(x=month, y=score, color=factor(type))) +
+    geom_point() +
+    geom_line() +
+    labs(title=paste("NPS & PSI for Series ",i)))
+}
+```
