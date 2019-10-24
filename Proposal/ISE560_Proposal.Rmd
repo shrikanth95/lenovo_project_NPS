@@ -85,13 +85,6 @@ Key parameters include the following:
 # Critical Uncertainties
 
 Identify and describe critical uncertainties within the model with regards to parameters and decision variables. Identify those uncertainties that may be dynamic (stochastic). 
-
-  - Three variables of interest
-    - pNPS 
-    - PSI and Star rating
-    - Telemetry
-  - Discretize probabilities. 
-  - We are given time series data for two years.  
   
 # Markov Decision Process
 
