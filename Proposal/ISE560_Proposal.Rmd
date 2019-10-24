@@ -98,7 +98,7 @@ Identify and describe critical uncertainties within the model with regards to pa
   
 # Markov Decision Process
 
-The states that can be used to develop a Markov Chain include NPS states and star rating states. We have categorized NPS into five states. 
+The states that can be used to develop a Markov Chain include NPS states and star rating states. We have categorized NPS into five states.\textsuperscript{\ref{refs}}
 
 State              | Range          |
 ----------         | -------------- | 
@@ -137,7 +137,9 @@ The period of interest is one month.  Star ratings are averaged over a month for
 \end{figure}
 
 
-## Customer Sentiment
+## Epochs
+
+We looked at the evolution of both PSI and NPS over various time periods.  Figure \ref{fig:comm_epoch} is an example of PSI and NPS for commercial products over monthly and weekly epochs.  The weekly epochs show significant changes in both PSI and NPS from week to week.  Weekly is too fine-grained to be of practical use since it would require Lenovo to take an action within hours or days at most to have any meaningful impact.  On the other hand, the monthly epochs show less drastic changes and now the time scale for Lenovo to take action is more reasonable (days to a couple of weeks).
 
 ```{r}
 # Read in all sentiment data
@@ -175,7 +177,7 @@ survey.comm <- survey.comm.all %>%
   filter(ProductName %in% comm.prods$name)
 ```
 
-```{r fig.cap="\\label{fig:fig_comm}Commercial Sentiment and NPS Data", fig.pos="H"}
+```{r fig.cap="\\label{fig:comm_epoch}Commercial Sentiment and NPS Data", fig.pos="H"}
 ####################################################
 # Calculate PSI by month for all Commercial products
 ####################################################
@@ -227,8 +229,10 @@ grid.arrange(p1, p2, ncol=2)
 
 ## Telemetry
 
+# References \label{refs}
 
-References: https://www.satmetrix.com/wp-content/uploads/2019/04/2019-Benchmarks.pdf
+https://www.satmetrix.com/wp-content/uploads/2019/04/2019-Benchmarks.pdf
+
 https://delighted.com/nps-benchmarks
 
 
