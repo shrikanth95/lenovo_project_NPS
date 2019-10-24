@@ -86,6 +86,7 @@ Very Low NPS       |  4,5           |
 
 
 
+
 # Preliminary Data Analysis \label{data_analysis}
 
 
@@ -116,6 +117,7 @@ The period of interest is one month.  Star ratings are averaged over a month for
 ## Telemetry
 
 
-
+References: https://www.satmetrix.com/wp-content/uploads/2019/04/2019-Benchmarks.pdf
+https://delighted.com/nps-benchmarks
 
 
