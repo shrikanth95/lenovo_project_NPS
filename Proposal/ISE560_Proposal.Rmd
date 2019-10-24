@@ -98,20 +98,15 @@ Identify and describe critical uncertainties within the model with regards to pa
 
 The states that can be used to develop a Markov Chain include NPS states and star rating states. We have categorized NPS into five states.\textsuperscript{\ref{refs}}
 
-State              | Range          |
-----------         | -------------- | 
-Very Low NPS       | -100-8         |
-Moderately Low NPS |  8-35          |
-Normal  NPS        |  35-45         |
+NPS State          | Range          |Star State          | Range 
+----------         | -------------- |----------          | ----------
+Very Low NPS       | -100-8         | Negative Star      |  1,2           |
+Moderately Low NPS |  8-35          | Neutral Star       |  3             | 
+Normal  NPS        |  35-45         | Positive Star      |  4,5           |
 Moderately High NPS|  45-60         |
 Very High NPS      |  60-100        |
-Negative Star      |  1,2           |
-Neutral Star       |  3             | 
-Positive Star      |  4,5           |
-
 
 # Preliminary Data Analysis \label{data_analysis}
-
 
 Segment    | Total Products | w/Sentiment and NPS | w/Battery 
 ---------- | -------------- | ------------ | ------- 
