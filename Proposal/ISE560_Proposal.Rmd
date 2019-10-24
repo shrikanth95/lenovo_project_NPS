@@ -75,14 +75,14 @@ The states that can be used to develop a Markov Chain include NPS states and sta
 
 State              | Range          |
 ----------         | -------------- | 
-Moderately Low NPS | -100-8         |
-Normal NPS         |  8-35          |
-Moderately High NPS|  35-45         |
-Very High NPS      |  45-60         |
-Negative Star      |  60-100        |
-Neutral Star       |  1,2           |
-Positive Star      |  3             | 
-Very Low NPS       |  4,5           |
+Very Low NPS       | -100-8         |
+Moderately Low NPS |  8-35          |
+Normal  NPS        |  35-45         |
+Moderately High NPS|  45-60         |
+Very High NPS      |  60-100        |
+Negative Star      |  1,2           |
+Neutral Star       |  3             | 
+Positive Star      |  4,5           |
 
 
 
