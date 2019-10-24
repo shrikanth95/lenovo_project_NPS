@@ -1,0 +1,239 @@
+---
+title: "Working Analysis Correlation analysis"
+author: "ISE 560"
+date: "October 21, 2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width = "50%")
+knitr::opts_chunk$set(fig.align = "center")
+
+library(tidyverse)
+source("../src_lenovo_project.R")
+```
+
+
+```{r}
+# Read in all sentiment data
+sentiment <- read.csv("../RawData/CID_Web_Sentiment.csv")
+
+# Read in all NPS data
+survey <- read.csv("../RawData/Lenovo_Survey_Data_pNPS_Rev2.csv")
+
+# Convert Product.NPS to a numeric values
+
+
+# TO DO: nps$Segment needs some cleaning
+# Need to handle "blanks", "-" and convert "Consumer" to "Lenovo-Consumer" for Segmentt
+# Need to handle "-" for Product.NPS
+```
+
+# SMB Products
+
+## Product List with Sentiment And Survey Data
+```{r}
+
+# Filter Sentiment 
+sentiment.smb.all <- sentiment %>%
+  # filter(Business.Group == "LENOVO - CONSUMER") %>%
+  mutate(ProductName = I(toupper(as.character(Product))))
+
+# Filter Survey
+survey.smb.all <- survey %>%
+  mutate(ProductName = I(toupper(as.character(Product)))) %>%
+  mutate(NPS = as.numeric(as.character(Product.NPS))) %>%
+  drop_na(NPS)       # TO DO: Right now this drops rows where NPS is "-"
+                     #        Check Amber's answer whether or not these need to be counted in total
+
+# Get set of SMB products
+smb.prods.df1 <- sort(unique(sentiment.smb.all$ProductName))
+smb.prods.df2 <- sort(unique(survey.smb.all$ProductName))
+
+smb.prods <- data.frame(name = I(unique(c(smb.prods.df1, smb.prods.df2)))) %>%
+  mutate(have_sentiment = name %in% smb.prods.df1,
+         have_survey = name %in% smb.prods.df2) %>%
+  filter(have_sentiment & have_survey)
+
+smb.prods
+```
+
+```{r}
+# Filter survey and sentiment to only SMB products with data in both
+sentiment.smb <- sentiment.smb.all %>%
+  filter(ProductName %in% smb.prods$name)
+
+survey.smb <- survey.smb.all %>%
+  filter(ProductName %in% smb.prods$name)
+
+# Calculate PSI by month for SMB products
+smb.psi <- sentiment.smb %>%
+  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))
+
+# Calculate NPS by month for SMB producs
+
+smb.nps <- survey.smb %>%
+  group_by(month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total)
+
+ggplot() +
+  geom_line(data = smb.psi, mapping = aes(x=month, y=psi, color="PSI")) +
+  geom_line(data = smb.nps, mapping = aes(x=month, y=nps, color="NPS")) +
+  labs(title="NPS & PSI for all SMB Products")
+
+```
+
+
+
+# All Products
+
+## Product List with Sentiment And Survey Data
+```{r}
+# Filter Commercial data
+sentiment.all <- sentiment %>%
+  # filter(Business.Group == "LENOVO - CONSUMER") %>%
+  mutate(ProductName = I(toupper(as.character(Product)))) 
+
+
+survey.all <- survey %>%
+  # filter(Segment == "Lenovo - Consumer"|Segment == "Consumer") %>%
+  mutate(ProductName = I(toupper(as.character(Product))), 
+         SeriesName = I(toupper(as.character(Series)))) %>%
+  mutate(NPS = as.numeric(as.character(Product.NPS))) %>%
+  drop_na(NPS)
+
+# Get set of Commercial products
+all.prods.df1 <- sort(unique(sentiment.all$ProductName))
+all.prods.df2 <- sort(unique(survey.all$ProductName))
+all.prods <- data.frame(name = I(unique(c(all.prods.df1, all.prods.df2)))) %>%
+  mutate(have_sentiment = name %in% all.prods.df1,
+         have_survey = name %in% all.prods.df2) %>%
+  filter(have_sentiment & have_survey)
+
+all.prods
+```
+
+```{r}
+# Filter to only consider products with both sentiment and survey data
+sentiment.all <- sentiment.all  %>%
+  filter(ProductName %in% all.prods$name)
+
+survey.all <- survey.all %>%
+  filter(ProductName %in% all.prods$name)
+```
+
+```{r}
+
+# Calculate PSI by month for all Commercial products
+all.psi.month <- sentiment.all %>%
+  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))
+
+# Calculate NPS by month for all Commercial producs
+all.nps.month <- survey.all %>%
+  group_by(month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total)
+
+ggplot() +
+  geom_line(data = all.psi.month, mapping = aes(x=month, y=psi, color="PSI")) +
+  geom_line(data = all.nps.month, mapping = aes(x=month, y=nps, color="NPS")) +
+  labs(title="NPS & PSI for all Commercial Products")
+```
+
+```{r}
+# Calculate PSI by week for all Commercial products
+all.psi.week <- sentiment.all %>%
+  group_by(week = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))
+
+# Calculate NPS by month for all Commercial producs
+all.nps.week <- survey.all %>%
+  group_by(week = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "week")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total)
+
+ggplot() +
+  geom_line(data = all.psi.week, mapping = aes(x=week, y=psi, color="PSI")) +
+  geom_line(data = all.nps.week, mapping = aes(x=week, y=nps, color="NPS")) +
+  labs(title="NPS & PSI for all Consumer Products")
+```
+
+
+
+```{r}
+# Calculate PSI by month and by Series
+# Series is in the NPS file but not sentiment file so we need
+# to do some massaging to match that data up first; 
+# this is kludgy but works 
+tmp1 <- survey.all %>%
+  select(ProductName, SeriesName) %>%
+  unique()
+
+tmp2 <- left_join(sentiment.all, tmp1, by=c("ProductName"))
+
+all.psi.month_series <- tmp2 %>%
+  group_by(SeriesName,
+           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))
+
+# Calculate NPS by month and series
+all.nps.month_series <- survey.all %>%
+  group_by(SeriesName,
+           month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total)
+
+tmp <- merge(all.nps.month_series, all.psi.month_series, all=T) %>%
+  select(-promoter, -detractor, -total, -pos, -neg) %>%
+  gather(key = type, value=score, -SeriesName, -month) 
+
+tmp <- reshape(tmp, idvar = c("SeriesName", "month"), timevar = "type", direction = "wide")
+tmp <- tmp[complete.cases(tmp),]
+lm.summary.df <- data.frame(Series = unique(tmp$Series), 
+                            p.value = numeric(length(unique(tmp$Series))),  
+                            R.squared = numeric(length(unique(tmp$Series))),
+                            size = numeric(length(unique(tmp$Series))))
+i= 1
+for (series in unique(tmp$Series)){
+  nps = tmp$score.nps[tmp$SeriesName == series]
+  psi = tmp$score.psi[tmp$SeriesName == series]
+  limit = min (length(nps), length(psi))
+  if(limit > 3){
+    model = lm(nps[1:limit]~psi[1:limit],na.action=na.exclude)
+    lm.summary.df$p.value[i] = summary(model)$coefficients[,4]
+    lm.summary.df$R.squared[i] = summary(model)$r.squared
+    lm.summary.df$size[i] = limit
+  }
+  i = i + 1
+}
+lm.summary.df
+
+```
+
+
+
+
