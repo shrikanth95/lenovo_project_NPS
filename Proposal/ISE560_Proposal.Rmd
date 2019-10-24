@@ -65,6 +65,7 @@ We propose using k-fold cross validation to evaluate candidate models as follows
 
 # NPS & Telemetry
    Net Promotor Score (NPS) is a management tool that measures customer satisfaction, as well as customer loyalty. The score is based entirely on the customer’s response to the question “How likely are you to recommend this product (or service) to someone else?” Their response is a number on the scale of zero (being the least likely) to ten (being the most likely). Companies then categorize the customers based off the scores they inputted. If a customer’s NPS response score was between a nine and a ten, the customer is called a promoter. If the customer’s response was low, between zero and six, they are called a detractor. The company’s NPS score is calculated by subtracting the percentage of detractors from the percentage of promoters. Every industry has a different NPS average and this number can give a company a good indication of how loyal their customers are compared to other companies. Customer loyalty is crucial because companies spend less money keeping current customers than marketing to attract new customers. Within the laptop and tablet industry, the average NPS score is a 40. 
+   
    Telemetry data is system performance data that is captured as soon as a device is turned on. This data is captured by Microsoft and then sent to Lenovo. Lenovo can then analyze this data to determine meaningful information about their machines. Telemetry is crucial within the laptop industry because it gives companies insight on which features their customers are using the most, enabling them to determine the most important features and shape future models based off of these statistics. Analyzing Telemetry data can also help Lenovo determine which devices are malfunctioning or experiencing bugs. For instance, if the data shows that seventy percent of Lenovo ThinkPad’s are crashing every two hours, Lenovo may need to provide some type of update or even recall the machine. In this same example where a customer is experiencing crashes every two hours, it is likely that they will answer the question “How likely are you to recommend this product (or service) to someone else?” with a low NPS score and be identified as a detractor. For this reason, telemetry has a great potential for predicting NPS score.
 
 # Key Variables and Parameters
@@ -174,7 +175,7 @@ survey.comm <- survey.comm.all %>%
   filter(ProductName %in% comm.prods$name)
 ```
 
-```{r fig.cap="\\label{fig:comm_epoch}Commercial Sentiment and NPS Data", fig.pos="H"}
+```{r fig.cap="\\label{fig:comm_epoch}Commercial Sentiment and NPS Data", fig.pos="H", fig.height=2}
 ####################################################
 # Calculate PSI by month for all Commercial products
 ####################################################
@@ -195,8 +196,8 @@ comm.nps.month <- survey.comm %>%
 p1 <- ggplot() +
   geom_line(data = comm.psi.month, mapping = aes(x=month, y=psi, color="PSI")) +
   geom_line(data = comm.nps.month, mapping = aes(x=month, y=nps, color="NPS")) +
-  labs(title="By Month") +
-  theme(legend.position = "bottom")
+  #labs(title="By Month") +
+  theme(legend.position = "none")
 
 ###################################################
 # Calculate PSI by week for all Commercial products
@@ -217,11 +218,11 @@ comm.nps.week <- survey.comm %>%
 
 p2 <- ggplot() +
   geom_line(data = comm.psi.week, mapping = aes(x=week, y=psi, color="PSI")) +
-  geom_line(data = comm.nps.week, mapping = aes(x=week, y=nps, color="NPS")) +
-  labs(title="By Week") +
-  theme(legend.position = "bottom")
+  geom_line(data = comm.nps.week, mapping = aes(x=week, y=nps, color="NPS")) 
+  #labs(title="By Week") +
+  #theme(legend.position = "bottom")
 
-grid.arrange(p1, p2, ncol=2)
+grid.arrange(p1, p2, ncol=2, widths=c(2.4, 3.0))
 ```
 
 ## Telemetry
