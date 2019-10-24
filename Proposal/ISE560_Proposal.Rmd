@@ -68,51 +68,44 @@ We propose using k-fold cross validation to evaluate candidate models as follows
    
    Telemetry data is system performance data that is captured as soon as a device is turned on. This data is captured by Microsoft and then sent to Lenovo. Lenovo can then analyze this data to determine meaningful information about their machines. Telemetry is crucial within the laptop industry because it gives companies insight on which features their customers are using the most, enabling them to determine the most important features and shape future models based off of these statistics. Analyzing Telemetry data can also help Lenovo determine which devices are malfunctioning or experiencing bugs. For instance, if the data shows that seventy percent of Lenovo ThinkPad’s are crashing every two hours, Lenovo may need to provide some type of update or even recall the machine. In this same example where a customer is experiencing crashes every two hours, it is likely that they will answer the question “How likely are you to recommend this product (or service) to someone else?” with a low NPS score and be identified as a detractor. For this reason, telemetry has a great potential for predicting NPS score.
 
-# Key Variables, Parameters and Critical Uncertainties \ref{critical_analysis}
+# Key Variables, Parameters and Critical Uncertainties \label{critical_analysis}
 
-Based on the preliminary data analysis key variables include the following:
+We elaborate on the key features that we intened to use for the prediction problem.  Based on the preliminary data analysis key variables ($\theta$) include the following:$\theta$ = \{Product Sentiment Index (PSI), Star rating, Business Segment (i.e., Commercial and Consumer), Product Family (Series),Battery Life\}
 
-  - Product Sentiment Index (PSI)
-  - Star rating
-  - Business Segment (i.e., Commercial and Consumer)
-  - Product Family/Series
-  - Battery Life
+We observe that the business segment plays a role in the quality and the life cycle of the products as usage patterns for businesses and homes are different.  We also wish to account for the product family/series as different product families can be grouped together.As elaborated in the next section, a key parameter is the transition matrix for star ratings, PSI and pNPS scores.  Probabiities are estimated from the data and specifications are provided in the following section.
 
-Key parameters include the following:
+Uncertainities feature in the dataset extensively. As NPS scores have a long lead time (3-6 months) before being made available for analysis and as PSI scores are acquired more frequently (weekly), mapping of PSI to NPS should also account for lead time by time shifting data.  Further, there is no concrete evidence of the Sentiment data being geographically close to the NPS survey locations.  Hardware can be subjected to a variety of weather and humidity levels that change the user experience in the long run.  These problems include reduced battery life and touchpads losing sensitivity.  We intend to investigate how we can use telemetry data further.
 
-  - NPS and PSI Transition Probabilities (estimated from the data)
-
-\textbf{Note sure on how to present telemetry---due to time lag}
 
 # Markov Decision Process
 
-The states that can be used to develop a Markov Chain include NPS states and star rating states. We have categorized NPS into five states.\textsuperscript{\ref{refs}}
+The states that can be used to develop a Markov Chain include NPS, star rating and PSI states. We have categorized NPS and PSI into five states and Star rating into three states.\textsuperscript{\ref{refs}}
 
-NPS State          | Range          |Star State          | Range 
-----------         | -------------- |----------          | ----------
-Very Low NPS       | -100-8         | Negative Star      |  1,2           |
-Moderately Low NPS |  8-35          | Neutral Star       |  3             | 
-Normal  NPS        |  35-45         | Positive Star      |  4,5           |
-Moderately High NPS|  45-60         |
-Very High NPS      |  60-100        |
+NPS State          | Range          |Star State          | Range          | PSI State    | Range
+----------         | -------------- |----------          | ----------     | ------------ | --------
+Very Low NPS       | -100-8         | Negative Star      |  1,2           | Low PSI | -100 to 8 
+Moderately Low NPS |  8-35          | Neutral Star       |  3             | Moderately Low NPS |  8-35
+Normal  NPS        |  35-45         | Positive Star      |  4,5           | Normal  NPS        |  35-45 
+Moderately High NPS|  45-60         |                    |                | Moderately High NPS|  45-60 
+Very High NPS      |  60-100        |                    |                | Very High NPS      |  60-100
 
-In order to use NPS scores to make decisions on actions--with associated costs--like performing call backs, rolling out software patches and doing nothing, we use Markov Decision Processes to develop an optimial policy for each state of pNPS. Existing pNPS data can be used to calculate state transitions probabilities.  The validity of the regression model described in Section \ref{critical_analysis} can be established by running an MDP using the transition probabilities calculated from the predicted NPS.  
+We consider a two objective problem where we wish to maximise the NPS by taking actions(described shortly) at minimial cost.  We propose to use an MDP where the action space \textit{A} can be defined as \textit{A}=\{Take no action,Roll-out routine software patch,Roll-out Emergency Software Patch,Issue a Product Call-back\}.  Although there is no information on the costs, we can make educated guesses on a relative scale.  For instance, the action with the least cost would be to take no action whereas the most expensive action would be call-back products.  A software patch would fall in the middle with the emergency rollout being more expensive of the two. For the MDP, we propose the two objective problem because minimising only the cost would result in choosing to not act. 
+
+For a pre-defined epoch, transition probabilities of PIS and pNPS can be calculated by measuring the number of times the variables have changed states.  Essentially, for element $p_{i,j}$ of the transition matrix $P_{nps}$, we have
+\[p_{i,j} = \frac{\text{Number of transitions from } i \text{ to } j }{\text{Total numer of transitions}}\].  The calculation for PIS and star rating transition probabilities are analogous.  Note that the statisical model predicting pNPS will also have an associated transition matrix $\hat{P}_{nps}$ where individual  probabilities $\hat{p}_{i,j}$are defined as follows:
+
+\[ \hat{p}_{i,j} =  p\{f_{reg}(\theta) = i \to f_{reg}(\theta) = j\} \]
+where $f_{reg}(\theta)$ is the regression model and $\theta$ is the new input the statistical model. The validity of the regression model described in Section \ref{critical_analysis} can be established by running an MDP using the transition probabilities calculated from the predicted NPS.  
 
 # Preliminary Data Analysis \label{data_analysis}
 
-Series    | Number of Epochs | p-value | $R^2$
----------- | -------------- | ------------ | ------- 
-Lenovo AR   | 4 | 0.17 | 0.67     |
-Accessories | 5 | 0.42 | 0.49     |
-IDEACENTER 300 | 9 | 0.0047 | 0.39 |
-IDEAPAD 100 | 13 | 0.36 | 0.33 |
 
-Figure \ref{fig:overall_summary} provides a broad overview of the trends within pNPS, PIS and the star rating.  Note that pNPS was calculated using the given formula.  PSI was calculated by:
+Figure \ref{fig:overall_summary} provides a broad overview of the trends within pNPS, PIS and the star rating.  The Star rating was aggregated in the same way as PSI. This is given by:
 
 \begin{equation}
-PSI = \frac{\text{Positive mentions}- \text{Negative mentions}}{\text{Positive mentions}+ \text{Negative mentions}}\times 100.
+\text{Star index} = \frac{\text{Positive Stars}- \text{Negative Stars}}{\text{Positive Stars}+ \text{Negative Stars}}\times 100.
 \end{equation}
-The period of interest is one month.  Star ratings are averaged over a month for each segment. In order to observe trends, star rating is scaled by a multiplicative factor of 20.  Further note that as ownership durating is avaiable only for the surveys, the PIS and Star rating per segment will be identical in each facet.  
+We observe that the duration of ownership could be a potential variable as electronic devices are subject to degradation. The period of interest is one month.  Star ratings are averaged over a month for each segment. Further note that as ownership duration is avaiable only for the surveys, the PIS and Star rating per segment will be identical in each facet.  
   
 \begin{figure}[t]
   \centering
@@ -164,7 +157,7 @@ p1 <- ggplot() +
   geom_line(data = comm.psi.month, mapping = aes(x=month, y=psi, color="PSI")) +
   geom_line(data = comm.nps.month, mapping = aes(x=month, y=nps, color="NPS")) +
   #labs(title="By Month") +
-  theme(legend.position = "none")+ylab("")+xlab("Month")
+  theme(legend.position = "none",axis.text.x = element_text(angle = 25))+ylab("")+xlab("Month")
 
 ###################################################
 # Calculate PSI by week for all Commercial products
@@ -186,13 +179,11 @@ comm.nps.week <- survey.comm %>%
 p2 <- ggplot() +
   geom_line(data = comm.psi.week, mapping = aes(x=week, y=psi, color="PSI")) +
   geom_line(data = comm.nps.week, mapping = aes(x=week, y=nps, color="NPS"))+ylab("")+
-  labs(color = "")+xlab("Week")
+  labs(color = "")+xlab("Week")+theme(axis.text.x = element_text(angle = 25),)
   #theme(legend.position = "bottom")
 
 grid.arrange(p1, p2, ncol=2, widths=c(2.4, 3.0))
 ```
-
-## Telemetry
 
 # References \label{refs}
 
