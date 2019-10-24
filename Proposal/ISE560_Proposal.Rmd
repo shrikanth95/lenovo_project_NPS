@@ -116,11 +116,11 @@ We observe that the duration of ownership could be a potential variable as elect
 \end{figure}
 
 
-Segment    | Total Products | w/Sentiment and NPS | w/Battery 
----------- | -------------- | ------------ | ------- 
-Consumer   | 487            |      74          | TBD     
-Commercial | 238            |      46          | TBD     
-SMB        |   59           |      18          | TBD     
+Segment    | Total Products | w/Sentiment and NPS 
+---------- | -------------- | ------------ 
+Consumer   | 487            |      74      
+Commercial | 238            |      46      
+SMB        |   59           |      18      
 
 ## Epochs
 
