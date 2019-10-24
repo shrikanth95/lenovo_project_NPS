@@ -30,6 +30,9 @@ library(tidyverse)
 library(lubridate)
 library(grid)
 library(gridExtra)
+
+source("../LenovoAnalysis/data_prep.R")
+
 ```
 
 # Overview
@@ -127,39 +130,10 @@ The period of interest is one month.  Star ratings are averaged over a month for
 We looked at the evolution of both PSI and NPS over various time periods.  Figure \ref{fig:comm_epoch} is an example of PSI and NPS for commercial products over monthly and weekly epochs.  The weekly epochs show significant changes in both PSI and NPS from week to week.  Weekly is too fine-grained to be of practical use since it would require Lenovo to take an action within hours or days at most to have any meaningful impact.  On the other hand, the monthly epochs show less drastic changes and now the time scale for Lenovo to take action is more reasonable (days to a couple of weeks).
 
 ```{r}
-# Read in all sentiment data
-sentiment <- read.csv("../RawData/CID_Web_Sentiment.csv")
+res <- filter_raw_data()
 
-# Read in all NPS data
-survey <- read.csv("../RawData/Lenovo_Survey_Data_pNPS_Rev2.csv")
-
-# Filter Commercial data
-sentiment.comm.all <- sentiment %>%
-  filter(Business.Group == "LENOVO - COMMERCIAL") %>%
-  mutate(ProductName = I(toupper(as.character(Product)))) 
-
-
-survey.comm.all <- survey %>%
-  filter(Segment == "Lenovo - Commercial") %>%
-  mutate(ProductName = I(toupper(as.character(Product))), 
-         SeriesName = I(toupper(as.character(Series)))) %>%
-  mutate(NPS = as.numeric(as.character(Product.NPS))) %>%
-  drop_na(NPS)
-
-# Get set of Commercial products
-comm.prods.df1 <- sort(unique(sentiment.comm.all$ProductName))
-comm.prods.df2 <- sort(unique(survey.comm.all$ProductName))
-comm.prods <- data.frame(name = I(unique(c(comm.prods.df1, comm.prods.df2)))) %>%
-  mutate(have_sentiment = name %in% comm.prods.df1,
-         have_survey = name %in% comm.prods.df2) %>%
-  filter(have_sentiment & have_survey)
-
-# Filter to only consider products with both sentiment and survey data
-sentiment.comm <- sentiment.comm.all  %>%
-  filter(ProductName %in% comm.prods$name)
-
-survey.comm <- survey.comm.all %>%
-  filter(ProductName %in% comm.prods$name)
+load("../CleanData/filtered_sentiment_data.Rdata")
+load("../CleanData/filtered_survey_data.Rdata")
 ```
 
 ```{r fig.cap="\\label{fig:comm_epoch}Commercial Sentiment and NPS Data", fig.pos="H", fig.height=2}
