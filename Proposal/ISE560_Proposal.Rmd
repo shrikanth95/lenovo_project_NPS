@@ -30,9 +30,6 @@ library(tidyverse)
 library(lubridate)
 library(grid)
 library(gridExtra)
-
-source("../LenovoAnalysis/data_prep.R")
-
 ```
 
 # Overview
@@ -130,6 +127,8 @@ The period of interest is one month.  Star ratings are averaged over a month for
 We looked at the evolution of both PSI and NPS over various time periods.  Figure \ref{fig:comm_epoch} is an example of PSI and NPS for commercial products over monthly and weekly epochs.  The weekly epochs show significant changes in both PSI and NPS from week to week.  Weekly is too fine-grained to be of practical use since it would require Lenovo to take an action within hours or days at most to have any meaningful impact.  On the other hand, the monthly epochs show less drastic changes and now the time scale for Lenovo to take action is more reasonable (days to a couple of weeks).
 
 ```{r}
+source("../LenovoAnalysis/data_prep.R")
+
 res <- filter_raw_data()
 
 load("../CleanData/filtered_sentiment_data.Rdata")
