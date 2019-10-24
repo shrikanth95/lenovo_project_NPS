@@ -196,8 +196,8 @@ grid.arrange(p1, p2, ncol=2, widths=c(2.4, 3.0))
 
 # References \label{refs}
 
-https://www.satmetrix.com/wp-content/uploads/2019/04/2019-Benchmarks.pdf
+North America International. “Net Promoter Benchmarks.” Nice Sametrix, 23 Oct. 2019, www.satmetrix.com/wp-content/uploads/2019/04/2019-Benchmarks.pdf.
 
-https://delighted.com/nps-benchmarks
+Delighted. NPS Benchmarks: Compare Net Promoter Scores by Industry. Brain & Company Inc, 2019, delighted.com/nps-benchmarks
 
 
