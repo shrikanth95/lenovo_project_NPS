@@ -41,7 +41,7 @@ A high-level outline of how we propose to approach this problem is as follows:
   \item Fit a linear model for NPS as a function of Product Sentiment Index (PSI) and other key variables.
   \item Use linear model to generate a predicted NPS transition matrix
   \item The predicted NPS transition matrix is an input to the Markov Decision Process (MDP)
-  \item The output from the MDP will be a recommended action based on the transition matrix, rewards, etc.
+  \item Use MDP to recommended actions based on the transition matrix, rewards, etc.
 \end{enumerate}
 
 ## Model
@@ -61,7 +61,7 @@ We propose using k-fold cross validation to evaluate candidate models as follows
   \end{enumerate}
 \end{enumerate}
 
-Assuming we develop multiple candidate models, then we will use the results from the cross-validation to  make a final model recommendation.  This approach gives us additional flexibility; for example, the final recommendation may be two models with different explanatory variables for the Commercial and Consumer segments versus a single model with the same explanatory variables for both business segments.
+<!-- Assuming we develop multiple candidate models, then we will use the results from the cross-validation to  make a final model recommendation.  This approach gives us additional flexibility; for example, the final recommendation may be two models with different explanatory variables for the Commercial and Consumer segments versus a single model with the same explanatory variables for both business segments. -->
 
 # NPS & Telemetry
    Net Promotor Score (NPS) is a management tool that measures customer satisfaction, as well as customer loyalty. The score is based entirely on the customer’s response to the question “How likely are you to recommend this product (or service) to someone else?” Their response is a number on the scale of zero (being the least likely) to ten (being the most likely). Companies then categorize the customers based off the scores they inputted. If a customer’s NPS response score was between a nine and a ten, the customer is called a promoter. If the customer’s response was low, between zero and six, they are called a detractor. The company’s NPS score is calculated by subtracting the percentage of detractors from the percentage of promoters. 
