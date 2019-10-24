@@ -22,17 +22,28 @@ urlcolor: blue
 knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(out.width="50%")
 knitr::opts_chunk$set(fig.align = "center")
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
 
 library(tidyverse)
+library(lubridate)
 ```
 
 # Overview
 
 Lenovo is an international company and a market leader in the personal computer industry.  One tool Lenovo relies upon in assessing customer satisifaction is Net Promoter Score (NPS); this is a standard metric used by major corporations across many industries.  However, latency is a limitation because it can take several months to aggregate sufficient data to calculate NPS.  Therefore Lenovo wants to determine if near-real-time data such as customer ratings and comments from websites and telemetry can accurately predict NPS.  If accurate predictions are possible, then Lenovo can potentially take actions (e.g., deploying out of cycle software patches) more quickly which will lead to higher NPS scores in the future.
 
+A high-level outline of how we propose to approach this problem is as follows:
+\begin{enumerate}[nosep]
+  \item Fit a linear model for NPS as a function of Product Sentiment Index (PSI) and other key variables.
+  \item Use linear model to generate a predicted NPS transition matrix
+  \item The predicted NPS transition matrix is an input to the Markov Decision Process (MDP)
+  \item The output from the MDP will be a recommended action based on the transition matrix, rewards, etc.
+\end{enumerate}
+
 ## Model
 
-We propose developing a linear regression model using the Product Sentiment Index (PSI) as one of the explanatory variables. The PSI will be modeled as a stochastic process which will help Lenovo better understand the evolution of both PSI and NPS over time.  Based on a preliminary analysis of the data (see Section \ref{data_analysis}), star rating, product series and telemetry data are additional potential explanatory variables for the model.   
+We propose developing a linear regression model where NPS is the response and PSI is a key explanatory variable. Based on a preliminary analysis of the data (see Section \ref{data_analysis}), star rating, product series and telemetry data are additional potential explanatory variables. The PSI will be modeled as a stochastic process.  Therefore, the NPS prediction from the model will also be a stochastic process.
 
 ## Metrics
 
@@ -43,21 +54,35 @@ We propose using k-fold cross validation to evaluate candidate models as follows
   \begin{enumerate}[nosep]
     \item Reserve the current group as the test data set.
     \item Fit candidate model(s) to the remaining k-1 data sets and perform variable selection.
-    \item Assess model fit with the test data set.
+    \item Assess model fit with the test data set.  Note we will assess both the predicted NPS scores and predicted NPS transition matrix against the test data set NPS scores and NPS transition matrix.
   \end{enumerate}
 \end{enumerate}
 
-Assuming we develop multiple candidate models, then we will use the results from the cross-validation to  make a final recommendation.  This approach gives us additional flexibility; for example, the final recommendation may be two models with different explanatory variables for the Commercial and Consumer segments versus a single model with the same explanatory variables for both business segments.
+Assuming we develop multiple candidate models, then we will use the results from the cross-validation to  make a final model recommendation.  This approach gives us additional flexibility; for example, the final recommendation may be two models with different explanatory variables for the Commercial and Consumer segments versus a single model with the same explanatory variables for both business segments.
 
 # NPS & Telemetry
    Net Promotor Score (NPS) is a management tool that measures customer satisfaction, as well as customer loyalty. The score is based entirely on the customer’s response to the question “How likely are you to recommend this product (or service) to someone else?” Their response is a number on the scale of zero (being the least likely) to ten (being the most likely). Companies then categorize the customers based off the scores they inputted. If a customer’s NPS response score was between a nine and a ten, the customer is called a promoter. If the customer’s response was low, between zero and six, they are called a detractor. The company’s NPS score is calculated by subtracting the percentage of detractors from the percentage of promoters. 
+   
    Every industry has a different NPS average and this number can give a company a good indication of how loyal their customers are compared to other companies. Customer loyalty is crucial because companies spend less money keeping current customers than marketing to attract new customers. Within the laptop and tablet industry, the average NPS score is a 40. Apple has the most loyal and satisfied customers with an NPS score of 68. Lenovo is above the industry average of 40 and by leveraging customer reviews and telemetry data to make changes to their products they can potentially improve their average NPS score in order to beat Apple.
+   
    Telemetry data is system performance data that is captured as soon as a device is turned on. This data is captured by Microsoft and then sent to Lenovo. Lenovo can then analyze this data to determine meaningful information about their machines. Telemetry is crucial within the laptop industry because it gives companies insight on which features their customers are using the most, enabling them to determine the most important features and shape future models based off of these statistics. Analyzing Telemetry data can also help Lenovo determine which devices are malfunctioning or experiencing bugs. For instance, if the data shows that seventy percent of Lenovo ThinkPad’s are crashing every two hours, Lenovo may need to provide some type of update or even recall the machine. In this same example where a customer is experiencing crashes every two hours, it is likely that they will answer the question “How likely are you to recommend this product (or service) to someone else?” with a low NPS score and be identified as a detractor. For this reason, telemetry has a great potential for predicting NPS score and we will incorporate the driver, battery, and Wi-Fi connectivity data findings into our predictive models. 
 
-
 # Key Variables and Parameters
-The models created will be based off of several variables including the evolution of sentiment, stars, business class, and product family. 
-Parameters?
+
+Based on the preliminary data analysis key variables include the following:
+
+  - Product Sentiment Index (PSI)
+  - Star rating
+  - Business Segment (i.e., Commercial and Consumer)
+  - Product Family/Series
+  - Battery Life
+
+Key parameters include the following:
+
+  - PSI Transition Probabilities (estimated from the data)
+  - ??
+  
+# Critical Uncertainties
 
 Identify and describe critical uncertainties within the model with regards to parameters and decision variables. Identify those uncertainties that may be dynamic (stochastic). 
 
@@ -68,10 +93,9 @@ Identify and describe critical uncertainties within the model with regards to pa
   - Discretize probabilities. 
   - We are given time series data for two years.  
   
-# Critical Uncertainties
-
 # Markov Decision Process
 The states that can be used to develop a Markov Chain include NPS states and star rating states. We have categorized NPS into five states. These five states are very low, moderately low, normal, moderately high, and very high. We will call a NPS score in the range of -100 to 8, very low. Scores that fall in the range of 8-35 will be considered low. The normal NPS range will be from 35 to 45 and the range of 45-60 will be considered high. Lastly, a NPS score that falls between 60-100 will be considered very high. The star ratings are rated on a 1-5 scale. Star ratings that are either a 1 or 2 will be considered a negative state, 3 will be considered a neutral state, and 4 or 5 will be considered a positive state.
+
 # Preliminary Data Analysis \label{data_analysis}
 
 
@@ -98,6 +122,62 @@ The period of interest is one month.  Star ratings are averaged over a month for
 
 
 ## Customer Sentiment
+
+```{r}
+# Read in all sentiment data
+sentiment <- read.csv("../RawData/CID_Web_Sentiment.csv")
+
+# Read in all NPS data
+survey <- read.csv("../RawData/Lenovo_Survey_Data_pNPS_Rev2.csv")
+
+# Filter Commercial data
+sentiment.comm.all <- sentiment %>%
+  filter(Business.Group == "LENOVO - COMMERCIAL") %>%
+  mutate(ProductName = I(toupper(as.character(Product)))) 
+
+
+survey.comm.all <- survey %>%
+  filter(Segment == "Lenovo - Commercial") %>%
+  mutate(ProductName = I(toupper(as.character(Product))), 
+         SeriesName = I(toupper(as.character(Series)))) %>%
+  mutate(NPS = as.numeric(as.character(Product.NPS))) %>%
+  drop_na(NPS)
+
+# Get set of Commercial products
+comm.prods.df1 <- sort(unique(sentiment.comm.all$ProductName))
+comm.prods.df2 <- sort(unique(survey.comm.all$ProductName))
+comm.prods <- data.frame(name = I(unique(c(comm.prods.df1, comm.prods.df2)))) %>%
+  mutate(have_sentiment = name %in% comm.prods.df1,
+         have_survey = name %in% comm.prods.df2) %>%
+  filter(have_sentiment & have_survey)
+
+# Filter to only consider products with both sentiment and survey data
+sentiment.comm <- sentiment.comm.all  %>%
+  filter(ProductName %in% comm.prods$name)
+
+survey.comm <- survey.comm.all %>%
+  filter(ProductName %in% comm.prods$name)
+
+# Calculate PSI by month for all Commercial products
+comm.psi.month <- sentiment.comm %>%
+  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))
+
+# Calculate NPS by month for all Commercial producs
+comm.nps.month <- survey.comm %>%
+  group_by(month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total)
+
+ggplot() +
+  geom_line(data = comm.psi.month, mapping = aes(x=month, y=psi, color="PSI")) +
+  geom_line(data = comm.nps.month, mapping = aes(x=month, y=nps, color="NPS")) +
+  labs(title="NPS & PSI for all Commercial Products")
+```
 
 ## Telemetry
 
