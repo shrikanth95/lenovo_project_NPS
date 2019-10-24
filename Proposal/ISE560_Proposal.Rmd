@@ -80,9 +80,8 @@ Based on the preliminary data analysis key variables include the following:
 
 Key parameters include the following:
 
-  - PSI Transition Probabilities (estimated from the data)
-  - ??
-  
+  - NPS and PSI Transition Probabilities (estimated from the data)
+
 # Critical Uncertainties
 
 Identify and describe critical uncertainties within the model with regards to parameters and decision variables. Identify those uncertainties that may be dynamic (stochastic). 
