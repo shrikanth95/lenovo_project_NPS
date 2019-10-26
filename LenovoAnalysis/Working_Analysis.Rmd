@@ -95,6 +95,17 @@ ggplot() +
 ```
 
 ```{r}
+# Plot NPS by PSI
+tmp <- merge(comm.nps.month, comm.psi.month, all=T) %>%
+  select(-promoter, -detractor, -total, -pos, -neg)  
+
+tmp %>%
+  ggplot() +
+  geom_point(mapping=aes(x=psi, y=nps))
+
+```
+
+```{r}
 # Calculate PSI by week for all Commercial products
 comm.psi.week <- sentiment.comm %>%
   group_by(week = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
@@ -116,6 +127,16 @@ ggplot() +
   labs(title="NPS & PSI for all Commercial Products")
 ```
 
+```{r}
+# Plot NPS by PSI
+tmp <- merge(comm.nps.week, comm.psi.week, all=T) %>%
+  select(-promoter, -detractor, -total, -pos, -neg)  
+
+tmp %>%
+  ggplot() +
+  geom_point(mapping=aes(x=psi, y=nps))
+
+```
 
 ```{r include=FALSE}
 # Calculate PSI by month and by product
@@ -189,6 +210,165 @@ for (i in unique(tmp$Series))
     geom_line() +
     labs(title=paste("NPS & PSI for Series ",i)))
 }
+```
+
+```{r}
+# Based on above plots the following families look like they have sufficient data
+# YOGA, P SERIES WORKSTATION, T SERIES, X SERIES
+# so let's keep those separate and group the rest
+
+fam <- c("YOGA", "P SERIES WORKSTATION", "T SERIES", "X SERIES")
+
+tmp1 <- survey.comm %>%
+  select(ProductName, SeriesName) %>%
+  unique()
+
+tmp2 <- left_join(sentiment.comm, tmp1, by=c("ProductName"))
+
+comm.psi.month_fam <- tmp2 %>%
+  mutate(fam = ifelse(SeriesName %in% fam, SeriesName, "OTHER")) %>%
+  group_by(fam,
+           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))
+
+# Calculate NPS by month and series
+comm.nps.month_fam <- survey.comm %>%
+  mutate(fam = ifelse(SeriesName %in% fam, SeriesName, "OTHER")) %>%
+  group_by(fam,
+           month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total)
+
+tmp <- merge(comm.nps.month_fam, comm.psi.month_fam, all=T) %>%
+  select(-promoter, -detractor, -total, -pos, -neg) %>%
+  gather(key = type, value=score, -fam, -month) 
+
+for (i in unique(tmp$fam))
+{
+  print(ggplot(data=tmp[tmp$fam==i,],
+              mapping = aes(x=month, y=score, color=factor(type))) +
+    geom_point() +
+    geom_line() +
+    labs(title=paste("NPS & PSI for Series ",i)))
+}
+
+```
+
+```{r}
+# Let's try shifting the time windows
+tmp <-  comm.psi.month_fam %>%
+  mutate(month = month %m+% months(1)) %>%
+  merge(comm.nps.month_fam, all=T) %>%
+  drop_na()
+
+tmp %>%
+  select(-promoter, -detractor, -total, -pos, -neg) %>%
+  ggplot() +
+  geom_point(mapping = aes(x=psi, y=nps, color=factor(fam)))
+
+```
+
+```{r}
+mdl <- lm(nps ~ psi + fam, data=tmp)
+summary(mdl)
+plot(mdl)
+plot(mdl$fitted.values, tmp$nps)
+```
+```{r}
+
+```
+
+# Consumer Products
+
+## Product List
+```{r}
+consumer.prods
+```
+
+```{r}
+# Calculate PSI by month for all Consumer products
+consumer.psi.month <- sentiment.consumer %>%
+  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))
+
+# Calculate NPS by month for all Commercial producs
+consumer.nps.month <- survey.consumer %>%
+  group_by(month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total)
+
+ggplot() +
+  geom_line(data = consumer.psi.month, mapping = aes(x=month, y=psi, color="PSI")) +
+  geom_line(data = consumer.nps.month, mapping = aes(x=month, y=nps, color="NPS")) +
+  labs(title="NPS & PSI for all Consumer Products")
+```
+
+```{r}
+# Plot NPS by PSI
+tmp <- merge(consumer.nps.month, consumer.psi.month, all=T) %>%
+  select(-promoter, -detractor, -total, -pos, -neg)  
+
+tmp %>%
+  ggplot() +
+  geom_point(mapping=aes(x=psi, y=nps))
+
+```
+
+```{r}
+# Calculate PSI by month and by Series
+# Series is in the NPS file but not sentiment file so we need
+# to do some massaging to match that data up first; 
+# this is kludgy but works 
+tmp1 <- survey.consumer %>%
+  select(ProductName, SeriesName) %>%
+  unique()
+
+tmp2 <- left_join(sentiment.consumer, tmp1, by=c("ProductName"))
+
+consumer.psi.month_series <- tmp2 %>%
+  group_by(SeriesName,
+           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))
+
+# Calculate NPS by month and series
+consumer.nps.month_series <- survey.consumer %>%
+  group_by(SeriesName,
+           month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total)
+
+tmp <- merge(consumer.nps.month_series, consumer.psi.month_series, all=T) %>%
+  select(-promoter, -detractor, -total, -pos, -neg) %>%
+  gather(key = type, value=score, -SeriesName, -month) 
+
+for (i in unique(tmp$Series))
+{
+  print(ggplot(data=tmp[tmp$Series==i,],
+              mapping = aes(x=month, y=score, color=factor(type))) +
+    geom_point() +
+    geom_line() +
+    labs(title=paste("NPS & PSI for Series ",i)))
+}
+
+tmp2 <- merge(consumer.nps.month_series, consumer.psi.month_series, all=T)
+ 
+
+tmp2 %>%
+  select(-promoter, -detractor, -total, -pos, -neg)
+  ggplot() +
+  geom_point(mapping = aes(x=psi, y=nps, color=factor(SeriesName)))
 ```
 
 
