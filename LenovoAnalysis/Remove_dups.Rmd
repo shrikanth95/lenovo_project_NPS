@@ -11,7 +11,7 @@ rm(list = ls())
 
 knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(out.width = "50%")
-knitr::opts_chunk$set(fig.align = "center")
+#knitr::opts_chunk$set(fig.align = "center")
 
 library(tidyverse)
 
@@ -51,17 +51,20 @@ comm.psi.comments <- sentiment.comm %>%
   group_by(ProductName, 
            month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month"),
            Comment, Stars.Rating) %>%
-  summarize(pos = sum(Sentiment == "POSITIVE"),
-            neg = sum(Sentiment == "NEGATIVE")) %>%
-  mutate(rater_psi = 100 * (pos - neg)/(pos +  neg)) %>%
+  summarize(rater_pos = sum(Sentiment == "POSITIVE"),
+            rater_neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(rater_psi = 100 * (rater_pos - rater_neg)/(rater_pos +  rater_neg)) %>%
   ungroup() %>%
   group_by(ProductName, month) %>%
-  summarise(psi = mean(rater_psi, na.rm = TRUE)) 
+  summarise(pos = sum(rater_pos),
+            neg = sum(rater_neg),
+            psi = mean(rater_psi, na.rm = TRUE)) 
 
 ```
 
 # Plot for comparison
 ```{r}
+par(mfrow=c(1,2))
 
 for (i in unique(comm.psi.month_prod$ProductName))
 {
@@ -73,4 +76,8 @@ for (i in unique(comm.psi.month_prod$ProductName))
     labs(title=paste("PSI for Product ",i)))
 }
 ```
+
+# Conclusion
+
+Lengthy comments often have multiple sentiment entries.  Where it can have an effect is when there is one lengthy comment that differs significantly from many other shorter comments.  For example, looking at the P52S in June 2019, there were a total of 30 positive and 10 negative sentiment entries resulting in a PSI = 50.  However, looking at the sentiment on a per rater basis, there were 18 unique comments (i.e. raters).  Nine of the 10 negative sentiment scores came from just two raters.  In this situation, first calculating a _per rater_ PSI and then taking the mean over all raters in the month of June results in a significantly higher PSI=80.
 
