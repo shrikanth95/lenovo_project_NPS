@@ -1,0 +1,88 @@
+---
+title: "Find_Ideapad_Proxies"
+author: "Melissa Wong"
+date: "November 2, 2019"
+output: pdf_document
+---
+---
+title: "Find_Proxies"
+author: "Melissa Wong"
+date: "\today"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width = "50%")
+#knitr::opts_chunk$set(eval = FALSE)
+#knitr::opts_chunk$set(fig.align = "center")
+
+library(tidyverse)
+
+source("../src_lenovo_project.R")
+source("data_prep.R")
+```
+
+```{r}
+filter_raw_data()
+
+load("../CleanData/filtered_sentiment_data.Rdata")
+```
+
+# IDEAPAD 330
+
+## By Month
+```{r}
+# Look at IdeaPad products by Month
+idea <- sentiment.consumer.all %>%
+  filter(grepl('IDEAPAD', ProductName)) %>%
+ group_by(ProductName,
+           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))
+
+par(mfrow=c(1,2))
+for (i in unique(idea$ProductName))
+{
+  print(
+    ggplot() +
+      geom_line(data=idea[idea$ProductName==i,],
+              mapping = aes(x=month, y=psi, colour=i)) +
+      geom_line(data=idea[idea$ProductName=="IDEAPAD 330",],
+              mapping = aes(x=month, y=psi, colour="IDEAPAD 330")) +
+      labs(title="PSI by month compared to IDEAPAD 330") +
+      theme(legend.position = "bottom")
+  )
+}
+```
+
+## By Week
+
+```{r}
+# Look at IdeaPad products by Weekl
+idea <- sentiment.consumer.all %>%
+  filter(grepl('IDEAPAD', ProductName)) %>%
+ group_by(ProductName,
+           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))
+
+par(mfrow=c(1,2))
+for (i in unique(idea$ProductName))
+{
+  print(
+    ggplot() +
+      geom_line(data=idea[idea$ProductName==i,],
+              mapping = aes(x=month, y=psi, colour=i)) +
+      geom_line(data=idea[idea$ProductName=="IDEAPAD 330",],
+              mapping = aes(x=month, y=psi, colour="IDEAPAD 330")) +
+      labs(title="PSI by week compared to IDEAPAD 330") +
+      theme(legend.position = "bottom")
+  )
+}
+```
