@@ -89,12 +89,43 @@ filter_raw_data <- function()
   
   ########## TO DO: CONSUMER DATA #########################
   
-  # Save objects to Rdata file
+  # Filter Consumer data
+  sentiment.consumer.all <- sentiment %>%
+    filter(Business.Group == "LENOVO - CONSUMER") %>%
+    mutate(ProductName = I(toupper(as.character(Product)))) 
+  
+  
+  survey.consumer.all <- survey %>%
+    filter(Segment == "Lenovo - Consumer") %>%
+    mutate(ProductName = I(toupper(as.character(Product))), 
+           SeriesName = I(toupper(as.character(Series)))) %>%
+    mutate(NPS = as.numeric(as.character(Product.NPS))) %>%
+    drop_na(NPS)
+  
+  # Get set of Commercial products
+  consumer.prods.df1 <- sort(unique(sentiment.consumer.all$ProductName))
+  consumer.prods.df2 <- sort(unique(survey.consumer.all$ProductName))
+  consumer.prods <- data.frame(name = I(unique(c(consumer.prods.df1, consumer.prods.df2)))) %>%
+    mutate(have_sentiment = name %in% consumer.prods.df1,
+           have_survey = name %in% consumer.prods.df2) %>%
+    filter(have_sentiment & have_survey)
+  
+  # Filter to only consider products with both sentiment and survey data
+  sentiment.consumer <- sentiment.consumer.all  %>%
+    filter(ProductName %in% consumer.prods$name)
+  
+  survey.consumer <- survey.consumer.all %>%
+    filter(ProductName %in% consumer.prods$name)
+  
+  ############# Save objects to Rdata file #######################
+  
   save(sentiment.comm.all, sentiment.comm, sentiment.smb.all, sentiment.smb, 
+       sentiment.consumer.all, sentiment.consumer,
        file = "../CleanData/filtered_sentiment_data.RData")
   save(survey.comm.all, survey.comm, survey.smb, survey.smb.all,
+       survey.consumer.all, survey.consumer,
        file = "../CleanData/filtered_survey_data.RData")
-  save(comm.prods, smb.prods,
+  save(comm.prods, smb.prods, consumer.prods,
        file = "../CleanData/filtered_product_lists.RData")
   
   return("Successfully created Rdata files")
