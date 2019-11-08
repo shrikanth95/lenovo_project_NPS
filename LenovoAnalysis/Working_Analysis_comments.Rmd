@@ -1,0 +1,35 @@
+---
+title: "Analysis on Comments"
+author: "ISE 560"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width = "50%")
+knitr::opts_chunk$set(fig.align = "center")
+
+library(tidyverse)
+
+source("../src_lenovo_project.R")
+source("data_prep.R")
+```
+
+
+```{r}
+filter_raw_data()
+
+load("../CleanData/filtered_sentiment_data.Rdata")
+load("../CleanData/filtered_survey_data.Rdata")
+load("../CleanData/filtered_product_lists.Rdata")
+
+```
+
+```{r}
+rough.list <- c("battery", "money", "cost", 'screen', 'touch',"wifi", "track", "drive", "speed", 'display', "")
+```
+
