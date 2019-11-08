@@ -167,6 +167,12 @@ PSITransitionMatix
 ```
 
 
+```{r}
+NPS.PSI.Matrix = PSITransitionMatix * NPSTransitionMatix
+NPS.PSI.Matrix
+
+```
+
 
 
 STARS TRANSITIONS
@@ -174,7 +180,7 @@ STARS TRANSITIONS
 ```{r}
 comm.stars.week <- sentiment.comm %>%
   group_by(week = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
-  summarise(pos = sum(3>= Stars.Rating),
+  summarise(pos = sum(4>= Stars.Rating),
             neg = sum(Stars.Rating <=2)) %>%
   mutate(Stars.Rating = 100 * (pos - neg)/(pos +  neg))
 ```
@@ -188,6 +194,7 @@ workingstars
 ```{r}
 sort(workingstars$Stars.Rating)
 ```
+
 
 Stars States
 
