@@ -1,0 +1,211 @@
+---
+title: "Transitions"
+author: "Shawn Markham, Melissa Wong, Shrakinth, Lekhana Yennam, Shrikanth"
+date: "November 8, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+```
+
+NPS TRANSITIONS
+
+```{r}
+working <- comm.nps.week[1:55,]
+working <- cbind(working, data.frame(next.nps = comm.nps.week$nps[2:56]))
+current.stateVH <- working%>% filter(nps>=60)
+
+current.stateVH
+```
+
+
+```{r}
+current.stateMMH <- working%>% filter(nps<60)
+current.NPSstateModeratelyHigh <- current.stateMMH %>% filter(nps>45)
+current.NPSstateModeratelyHigh 
+```
+
+```{r}
+current.stateNN <- working%>% filter(nps<=45)
+current.NPSstateNormal <- current.stateNN %>% filter(nps>=35)
+current.NPSstateNormal
+```
+
+```{r}
+current.stateMN <- working%>% filter(nps<35)
+current.NPSstateModeratelyLow <- current.stateMN %>% filter(nps>=8)
+current.NPSstateModeratelyLow
+```
+
+
+```{r}
+current.NPSstateVeryLow <- working%>% filter(nps<8)
+current.NPSstateVeryLow 
+```
+
+
+
+```{r}
+ x <- matrix(1:25, nrow = 5, dimnames = list(c("NPS Very High ","NPS Moderately High","NPS Normal","NPS Moderately Low","NPS Very Low"), c("NPS Very High ","NPS Moderately High","NPS Normal","NPS Moderately Low","NPS Very Low")))
+x[1,1] <- .4
+x[1,2] <- .2
+x[1,3] <- .2
+x[1,4] <- .2
+x[1,5] <- .2
+x[2,1] <- 2/13
+x[2,2] <- 2/13
+x[2,3] <- 4/13
+x[2,4] <- 4/13
+x[2,5] <- 1/13
+x[3,1] <- 3/19
+x[3,2] <- 7/19
+x[3,3] <- 5/19
+x[3,4] <- 4/19
+x[3,5] <- 0
+x[4,1] <- 2/12
+x[4,2] <- 2/12
+x[4,3] <- 6/12
+x[4,4] <- 2/12
+x[4,5] <- 0
+x[5,1] <- 0
+x[5,2] <- 0
+x[5,3] <- 1
+x[5,4] <- 0
+x[5,5] <- 0
+NPSTransitionMatix = round(x,2)
+NPSTransitionMatix
+
+```
+
+
+
+PSI TRANSITIONS
+
+
+
+```{r}
+workingpsi <- comm.psi.week[1:55,]
+workingpsi <- cbind(workingpsi, data.frame(next.psi = comm.psi.week$psi[2:56]))
+workingpsi
+```
+
+```{r}
+sort(workingpsi$psi)
+```
+
+PSI States
+
+PSI Very High: 72.2-100
+PSI Moderately High:62.11-72.2
+PSI Normal: 45.01-62.1
+PSI Moderately Low:30.01-45.00
+PSI Very Low: 0-30.00
+
+
+```{r}
+workingpsi <- comm.psi.week[1:55,]
+workingpsi <- cbind(workingpsi, data.frame(next.psi = comm.psi.week$psi[2:56]))
+current.PSI.VeryHigh <- workingpsi%>% filter(psi>=72.2)
+current.PSI.VeryHigh
+```
+
+```{r}
+current.stateNN <- workingpsi%>% filter(psi<=72.2)
+current.PSI.RelativelyHigh <- current.stateNN %>% filter(psi>=62.11)
+current.PSI.RelativelyHigh
+```
+
+```{r}
+current.stateNN <- workingpsi%>% filter(psi<=62.1)
+current.PSI.Normal <- current.stateNN %>% filter(psi>=45.01)
+current.PSI.Normal
+```
+
+```{r}
+current.stateNN <- workingpsi%>% filter(psi<=45)
+current.PSI.RelativelyLow <- current.stateNN %>% filter(psi>=30.01)
+current.PSI.RelativelyLow
+```
+
+```{r}
+current.stateNN <- workingpsi%>% filter(psi<=30)
+current.PSI.VeryLow <- current.stateNN %>% filter(psi>=0)
+current.PSI.VeryLow
+```
+```{r}
+x <- matrix(1:25, nrow = 5, dimnames = list(c("PSI Very High ","PSI Moderately High","PSI Normal","PSI Moderately Low","PSI Very Low"), c("PSI Very High ","PSI Moderately High","PSI Normal","PSI Moderately Low","PSI Very Low")))
+x[1,1] <- 4/11
+x[1,2] <- 4/11
+x[1,3] <- 1/11
+x[1,4] <- 2/11
+x[1,5] <- 0
+x[2,1] <- 1/11
+x[2,2] <- 4/11
+x[2,3] <- 5/11
+x[2,4] <- 1/11
+x[2,5] <- 0
+x[3,1] <- 5/11
+x[3,2] <- 2/11
+x[3,3] <- 2/11
+x[3,4] <- 1/11
+x[3,5] <- 1/11
+x[4,1] <- 0/11
+x[4,2] <- 1/11
+x[4,3] <- 3/11
+x[4,4] <- 4/11
+x[4,5] <- 3/11
+x[5,1] <- 0
+x[5,2] <- 1/10
+x[5,3] <- 0
+x[5,4] <- 4/10
+x[5,5] <- 5/10
+PSITransitionMatix = round(x,2)
+PSITransitionMatix
+```
+
+
+```{r}
+NPS.PSI.Matrix = PSITransitionMatix * NPSTransitionMatix
+NPS.PSI.Matrix
+
+```
+
+
+
+STARS TRANSITIONS
+
+```{r}
+comm.stars.week <- sentiment.comm %>%
+  group_by(week = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
+  summarise(pos = sum(4>= Stars.Rating),
+            neg = sum(Stars.Rating <=2)) %>%
+  mutate(Stars.Rating = 100 * (pos - neg)/(pos +  neg))
+```
+
+
+```{r}
+workingstars <- comm.stars.week[1:55,]
+workingstars <- cbind(workingstars, data.frame(next.Stars.Rating = comm.stars.week$Stars.Rating[2:56]))
+workingstars
+```
+```{r}
+sort(workingstars$Stars.Rating)
+```
+
+
+Stars States
+
+Very Neutral: 0-8
+Relatively Neutral: 8.01-19.99
+Very Positive: 20-100
+
+
+
+```{r}
+current.Stars.VeryPositive <- workingstars%>% filter(Stars.Rating>=20)
+current.Stars.VeryPositive
+```
+
