@@ -81,8 +81,84 @@ tmp_wide <- tmp_clean %>%
   summarise(count = n()) %>%
   spread(nps_cat, count, fill=0)
 
-# Fit proportional odds model
-# pom <- 
+tmp_wide
+
 ```
 
+## Collapse duplicate sentiment by rater
+
+```{r}
+
+# Calculate PSI by week and by product
+psi <- sentiment.consumer %>%
+  group_by(ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week"),
+           Comment, Stars.Rating) %>%
+  summarize(rater_pos = sum(Sentiment == "POSITIVE"),
+            rater_neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(rater_psi = ifelse(rater_pos == 0 & rater_neg == 0, 0, 
+                            100 * (rater_pos - rater_neg)/(rater_pos +  rater_neg))) %>%
+  ungroup() %>%
+  group_by(ProductName, time) %>%
+  summarise(pos = sum(rater_pos),
+            neg = sum(rater_neg),
+            psi = mean(rater_psi, na.rm = TRUE),
+            stars = mean(Stars.Rating)) %>%
+  mutate(psi_cat = case_when((psi <= 8 ~ "VERY_LOW"),
+                             (8 < psi & psi <=35) ~ "MODERATELY_LOW",
+                             (35 < psi & psi <=45) ~ "NORMAL",
+                             (45 < psi & psi <= 60) ~ "MODERATELY_HIGH",
+                             (60 < psi) ~ "VERY_HIGH"),
+         star_cat = case_when((stars < 2.5) ~ "NEGATIVE",
+                              (2.5 <= stars & stars < 3.5) ~ "NEUTRAL",
+                              (3.5 <= stars) ~ "POSITIVE"))
+
+# Calculate NPS by week and by product
+nps <- survey.consumer %>%
+  group_by(ProductName,
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "week")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total) %>%
+  mutate(nps_cat = case_when((nps <= 8 ~ "VERY_LOW"),
+                             (8 < nps & nps <=35) ~ "MODERATELY_LOW",
+                             (35 < nps & nps <=45) ~ "NORMAL",
+                             (45 < nps & nps <= 60) ~ "MODERATELY_HIGH",
+                             (60 < nps) ~ "VERY_HIGH"))
+
+tmp <- merge(nps, psi, all=T)
+
+# Remove rows if nps or psi = NA and spread into wide format
+tmp_clean <- tmp %>%
+  filter(!is.na(nps) & !is.na(psi)) %>%
+  dplyr::select(ProductName, psi_cat, star_cat, nps_cat) %>%
+  ungroup()
+
+tmp_wide <- tmp_clean %>%
+  group_by(psi_cat, star_cat, nps_cat) %>%
+  summarise(count = n()) %>%
+  spread(nps_cat, count, fill=0)
+
+tmp_wide
+```
+
+```{r}
+tmp_wide$psi_cat = factor(tmp_wide$psi_cat, levels = c("VERY_LOW", "MODERATELY_LOW",
+                       "NORMAL", "MODERATELY_HIGH", "VERY_HIGH"))
+
+tmp_wide$star_cat = factor(tmp_wide$star_cat, levels = c("NEGATIVE", "NEUTRAL", "POSITIVE"))
+
+pom <- vglm(cbind(VERY_LOW, MODERATELY_LOW, NORMAL, 
+                  MODERATELY_HIGH, VERY_HIGH) ~ psi_cat + star_cat, data = tmp_wide,
+                   family = cumulative(parallel = TRUE))
+
+summary(pom)
+```
+
+```{r}
+# LR test
+pchisq(89.6614, 46, lower.tail = FALSE)
+lrtest(pom)
+```
 
