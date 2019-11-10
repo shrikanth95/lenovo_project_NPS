@@ -200,8 +200,5 @@ sort(workingstars$next.stars)
 
 
 
-```{r}
-current.Stars.VeryPositive <- workingstars%>% filter(Stars.Rating>=20)
-current.Stars.VeryPositive
-```
+
 
