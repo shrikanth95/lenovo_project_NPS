@@ -8,13 +8,14 @@ output: pdf_document
 ```{r setup, include=FALSE}
 rm(list = ls())
 
-knitr::opts_chunk$set(echo = FALSE)
+#knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(out.width = "50%")
 #knitr::opts_chunk$set(eval = FALSE)
 #knitr::opts_chunk$set(fig.align = "center")
 
 library(tidyverse)
 library(VGAM) # for vglm
+library(MASS) # for polr
 
 #source("../src_lenovo_project.R")
 source("data_prep.R")
@@ -41,12 +42,12 @@ psi <- sentiment.consumer %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
             neg = sum(Sentiment == "NEGATIVE"),
             stars = mean(Stars.Rating)) %>%
-  mutate(psi = ifelse(pos == 0 & neg == 0, 0, 100 * (pos - neg)/(pos +  neg)))%>%
-  mutate(psi_cat = case_when((psi <= 8 ~ "VERY LOW"),
-                             (8 < psi & psi <=35) ~ "MODERATELY LOW",
-                             (35 < psi & psi <=45) ~ "NORMAL",
-                             (45 < psi & psi <= 60) ~ "MODERATELY HIGH",
-                             (60 < psi) ~ "VERY HIGH"),
+  mutate(psi = ifelse(pos == 0 & neg == 0, 0, 100 * (pos - neg)/(pos +  neg))) %>%
+  mutate(psi_cat = case_when((psi <= -50) ~ 75.0,
+                             (-50 < psi & psi <= 0) ~ -25.0,
+                             (0 < psi & psi <= 50) ~ 25.0,
+                             (50 < psi & psi <= 90) ~ 70.0,
+                             (90 < psi) ~ 95.0),
          star_cat = case_when((stars < 2.5) ~ "NEGATIVE",
                               (2.5 <= stars & stars < 3.5) ~ "NEUTRAL",
                               (3.5 <= stars) ~ "POSITIVE"))
@@ -59,11 +60,11 @@ nps <- survey.consumer %>%
             detractor = sum(NPS <= 6),
             total = n()) %>%
   mutate(nps = 100 * (promoter - detractor) / total) %>%
-  mutate(nps_cat = case_when((nps <= 8 ~ "VERY LOW"),
-                             (8 < nps & nps <=35) ~ "MODERATELY LOW",
+  mutate(nps_cat = case_when((nps <= 8 ~ "VERY_LOW"),
+                             (8 < nps & nps <=35) ~ "MOD_LOW",
                              (35 < nps & nps <=45) ~ "NORMAL",
-                             (45 < nps & nps <= 60) ~ "MODERATELY HIGH",
-                             (60 < nps) ~ "VERY HIGH"))
+                             (45 < nps & nps <= 60) ~ "MOD_HIGH",
+                             (60 < nps) ~ "VERY_HIGH"))
 
 tmp <- merge(nps, psi, all=T)
 ```
@@ -82,6 +83,27 @@ tmp_wide <- tmp_clean %>%
   spread(nps_cat, count, fill=0)
 
 tmp_wide
+
+```
+
+```{r}
+# tmp_wide$psi_cat = factor(tmp_wide$psi_cat, levels = c("VERY_LOW", "MOD_LOW",
+#                        "NORMAL", "MOD_HIGH", "VERY_HIGH"))
+
+tmp_wide$star_cat = factor(tmp_wide$star_cat, levels = c("NEGATIVE", "NEUTRAL", "POSITIVE"))
+
+pom <- vglm(cbind(VERY_LOW, MOD_LOW, NORMAL, 
+                  MOD_HIGH, VERY_HIGH) ~ psi_cat + star_cat, 
+            data = tmp_wide,
+            family = cumulative(parallel = TRUE))
+
+summary(pom)
+```
+
+
+```{r}
+# Estimated response probabilities for each group
+data.frame(PSI = tmp_wide$psi_cat, Stars=tmp_wide$star_cat, fitted(pom))
 
 ```
 
@@ -104,11 +126,11 @@ psi <- sentiment.consumer %>%
             neg = sum(rater_neg),
             psi = mean(rater_psi, na.rm = TRUE),
             stars = mean(Stars.Rating)) %>%
-  mutate(psi_cat = case_when((psi <= 8 ~ "VERY_LOW"),
-                             (8 < psi & psi <=35) ~ "MODERATELY_LOW",
-                             (35 < psi & psi <=45) ~ "NORMAL",
-                             (45 < psi & psi <= 60) ~ "MODERATELY_HIGH",
-                             (60 < psi) ~ "VERY_HIGH"),
+  mutate(psi_cat = case_when((psi <= -50) ~ 75.0,
+                             (-50 < psi & psi <= 0) ~ -25.0,
+                             (0 < psi & psi <= 50) ~ 25.0,
+                             (50 < psi & psi <= 90) ~ 70.0,
+                             (90 < psi) ~ 95.0),
          star_cat = case_when((stars < 2.5) ~ "NEGATIVE",
                               (2.5 <= stars & stars < 3.5) ~ "NEUTRAL",
                               (3.5 <= stars) ~ "POSITIVE"))
@@ -122,9 +144,9 @@ nps <- survey.consumer %>%
             total = n()) %>%
   mutate(nps = 100 * (promoter - detractor) / total) %>%
   mutate(nps_cat = case_when((nps <= 8 ~ "VERY_LOW"),
-                             (8 < nps & nps <=35) ~ "MODERATELY_LOW",
+                             (8 < nps & nps <=35) ~ "MOD_LOW",
                              (35 < nps & nps <=45) ~ "NORMAL",
-                             (45 < nps & nps <= 60) ~ "MODERATELY_HIGH",
+                             (45 < nps & nps <= 60) ~ "MOD_HIGH",
                              (60 < nps) ~ "VERY_HIGH"))
 
 tmp <- merge(nps, psi, all=T)
@@ -144,21 +166,61 @@ tmp_wide
 ```
 
 ```{r}
-tmp_wide$psi_cat = factor(tmp_wide$psi_cat, levels = c("VERY_LOW", "MODERATELY_LOW",
-                       "NORMAL", "MODERATELY_HIGH", "VERY_HIGH"))
+# tmp_wide$psi_cat = factor(tmp_wide$psi_cat, levels = c("VERY_LOW", "MOD_LOW",
+#                        "NORMAL", "MOD_HIGH", "VERY_HIGH"))
 
 tmp_wide$star_cat = factor(tmp_wide$star_cat, levels = c("NEGATIVE", "NEUTRAL", "POSITIVE"))
 
-pom <- vglm(cbind(VERY_LOW, MODERATELY_LOW, NORMAL, 
-                  MODERATELY_HIGH, VERY_HIGH) ~ psi_cat + star_cat, data = tmp_wide,
-                   family = cumulative(parallel = TRUE))
+pom <- vglm(cbind(VERY_LOW, MOD_LOW, NORMAL, 
+                  MOD_HIGH, VERY_HIGH) ~ psi_cat + star_cat, 
+            data = tmp_wide,
+            family = cumulative(parallel = TRUE))
 
 summary(pom)
 ```
 
 ```{r}
-# LR test
-pchisq(89.6614, 46, lower.tail = FALSE)
-lrtest(pom)
+# Estimated response probabilities for each group
+data.frame(PSI = tmp_wide$psi_cat, Stars=tmp_wide$star_cat, fitted(pom))
+
 ```
 
+
+```{r}
+# LR test
+pchisq(81.6526, 53, lower.tail = FALSE)
+```
+
+
+```{r}
+# Verify I get same results with polr
+
+tmp_long <- tmp_clean %>%
+  group_by(psi_cat, star_cat, nps_cat) %>%
+  summarise(count = n()) 
+
+tmp_long$nps_cat = factor(tmp_long$nps_cat, levels = c("VERY_LOW", "MOD_LOW",
+                        "NORMAL", "MOD_HIGH", "VERY_HIGH"))
+
+tmp_long$star_cat = factor(tmp_long$star_cat, levels = c("NEGATIVE", "NEUTRAL", "POSITIVE"))
+
+pom2 <- polr(nps_cat ~ psi_cat + star_cat, data=tmp_long, weight=count)
+
+summary(pom2)
+```
+
+## Baseline Category
+```{r}
+# Baseline category fit
+baseline <- vglm(cbind(VERY_LOW, MOD_LOW, NORMAL, 
+                 MOD_HIGH, VERY_HIGH) ~ psi_cat + star_cat, 
+                 data = tmp_wide,
+#                 family = cumulative)
+                 family = multinomial(refLevel = "VERY_LOW"))
+
+summary(baseline)
+```
+```{r}
+lrtest(baseline, pom)
+# POM is better fit than baseline category
+```
