@@ -1,0 +1,114 @@
+---
+title: "Transitions2.Rmd"
+author: "Melissa Wong"
+date: "November 16, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+#knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width = "50%")
+#knitr::opts_chunk$set(eval = FALSE)
+#knitr::opts_chunk$set(fig.align = "center")
+
+library(tidyverse)
+library(VGAM) # for vglm
+library(MASS) # for polr
+
+#source("../src_lenovo_project.R")
+source("data_prep.R")
+```
+
+```{r}
+filter_raw_data()
+
+load("../CleanData/filtered_sentiment_data.Rdata")
+load("../CleanData/filtered_product_lists.Rdata")
+load("../CleanData/filtered_survey_data.Rdata")
+```
+
+# Commercial
+
+## PSI Transitions By Week
+
+```{r}
+
+# Define PSI categories
+VERY_HIGH <- 72.2
+MOD_HIGH <- 62.11
+NORMAL <- 45.01
+MOD_LOW <- 30.0
+
+comm.psi <- sentiment.comm %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE"),
+            stars = mean(Stars.Rating)) %>%
+  mutate(psi = ifelse(pos == 0 & neg == 0, 0, 100 * (pos - neg)/(pos +  neg))) %>%
+  mutate(psi_cat = case_when((psi <= MOD_LOW) ~ "VERY_LOW",
+                             (MOD_LOW < psi & psi <= NORMAL) ~ "MOD_LOW",
+                             (NORMAL < psi & psi <= MOD_HIGH) ~ "NORMAL",
+                             (MOD_HIGH < psi & psi <= VERY_HIGH) ~ "MOD_HIGH",
+                             (VERY_HIGH < psi) ~ "VERY_HIGH"))
+
+n <- length(comm.psi$psi)
+
+# Now create data.frame with two psi columns lagged by 1 week
+
+tmp <- data.frame(t0 = comm.psi$psi_cat[1:n-1],
+                  t1 = comm.psi$psi_cat[2:n])
+
+transitions <- tmp %>%
+  group_by(t0, t1) %>%
+  summarize(count = n()) %>%
+  spread(t1, count, fill=0) %>%
+  ungroup()
+
+transitions$total <- rowSums(transitions[,2:6])
+
+transitions
+```
+
+## PSI Transitions by Month
+
+```{r}
+
+# Define PSI categories
+VERY_HIGH <- 72.2
+MOD_HIGH <- 62.11
+NORMAL <- 45.01
+MOD_LOW <- 30.0
+
+comm.psi <- sentiment.comm %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE"),
+            stars = mean(Stars.Rating)) %>%
+  mutate(psi = ifelse(pos == 0 & neg == 0, 0, 100 * (pos - neg)/(pos +  neg))) %>%
+  mutate(psi_cat = case_when((psi <= MOD_LOW) ~ "VERY_LOW",
+                             (MOD_LOW < psi & psi <= NORMAL) ~ "MOD_LOW",
+                             (NORMAL < psi & psi <= MOD_HIGH) ~ "NORMAL",
+                             (MOD_HIGH < psi & psi <= VERY_HIGH) ~ "MOD_HIGH",
+                             (VERY_HIGH < psi) ~ "VERY_HIGH"))
+
+n <- length(comm.psi$psi)
+
+# Now create data.frame with two psi columns lagged by 1 week
+
+tmp <- data.frame(t0 = comm.psi$psi_cat[1:n-1],
+                  t1 = comm.psi$psi_cat[2:n])
+
+transitions <- tmp %>%
+  group_by(t0, t1) %>%
+  summarize(count = n()) %>%
+  spread(t1, count, fill=0) %>%
+  ungroup()
+
+transitions$total <- rowSums(transitions[,2:6])
+
+transitions
+```
