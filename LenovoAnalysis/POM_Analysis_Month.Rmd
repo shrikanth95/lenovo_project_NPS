@@ -1,5 +1,5 @@
 ---
-title: "POM_Analysis"
+title: "POM_Analysis_Month"
 author: "Melissa Wong"
 date: \today
 output: pdf_document
@@ -183,24 +183,21 @@ tmp_wide
 
 tmp_wide$star_cat = factor(tmp_wide$star_cat, levels = c("NEGATIVE", "NEUTRAL", "POSITIVE"))
 
-pom <- vglm(cbind(VERY_LOW, MOD_LOW, NORMAL, 
+pom.1 <- vglm(cbind(VERY_LOW, MOD_LOW, NORMAL, 
                   MOD_HIGH, VERY_HIGH) ~ psi_cat + star_cat, 
             data = tmp_wide,
             family = cumulative(parallel = TRUE))
 
-summary(pom)
+summary(pom.1)
+```
+```{r}
+pchisq(54.7471, 45, lower.tail = FALSE)
 ```
 
 ```{r}
 # Estimated response probabilities for each group
-data.frame(PSI = tmp_wide$psi_cat, Stars=tmp_wide$star_cat, fitted(pom))
+data.frame(PSI = tmp_wide$psi_cat, Stars=tmp_wide$star_cat, fitted(pom.1))
 
-```
-
-
-```{r}
-# LR test
-pchisq(54.7, 45, lower.tail = FALSE)
 ```
 
 
@@ -216,9 +213,59 @@ tmp_long$nps_cat = factor(tmp_long$nps_cat, levels = c("VERY_LOW", "MOD_LOW",
 
 tmp_long$star_cat = factor(tmp_long$star_cat, levels = c("NEGATIVE", "NEUTRAL", "POSITIVE"))
 
-pom2 <- polr(nps_cat ~ psi_cat + star_cat, data=tmp_long, weight=count)
+pom.polr <- polr(nps_cat ~ psi_cat + star_cat, data=tmp_long, weight=count)
 
-summary(pom2)
+summary(pom.polr)
+```
+
+## Model with just PSI as predictor
+
+```{r}
+tmp_wide2 <- tmp_clean %>%
+  group_by(psi_cat, nps_cat) %>%
+  summarise(count = n()) %>%
+  spread(nps_cat, count, fill=0)
+
+pom.2 <- vglm(cbind(VERY_LOW, MOD_LOW, NORMAL, 
+                  MOD_HIGH, VERY_HIGH) ~ psi_cat, 
+            data = tmp_wide2,
+            family = cumulative(parallel = TRUE))
+
+summary(pom.2)
+```
+
+
+```{r}
+pchisq(54.7-28.7, 45-15, lower.tail=FALSE)
+```
+
+```{r}
+# Estimated response probabilities for each group
+fitted(pom.2)
+```
+
+## Model with interaction term
+
+```{r}
+pom.3 <- vglm(cbind(VERY_LOW, MOD_LOW, NORMAL, 
+                  MOD_HIGH, VERY_HIGH) ~ psi_cat + star_cat + psi_cat:star_cat, 
+            data = tmp_wide,
+            family = cumulative(parallel = TRUE))
+
+summary(pom.3)
+```
+
+```{r}
+pchisq(48.7, 43)
+```
+
+```{r}
+lrtest(pom.1, pom.3)
+```
+
+```{r}
+# Estimated response probabilities for each group
+data.frame(PSI = tmp_wide$psi_cat, Stars=tmp_wide$star_cat, fitted(pom.3))
 ```
 
 ## Baseline Category
@@ -233,6 +280,7 @@ baseline <- vglm(cbind(VERY_LOW, MOD_LOW, NORMAL,
 summary(baseline)
 ```
 ```{r}
-lrtest(baseline, pom)
+lrtest(baseline, pom.1)
+lrtest(baseline, pom.3)
 # POM is better fit than baseline category
 ```
