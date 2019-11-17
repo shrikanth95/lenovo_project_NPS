@@ -32,11 +32,10 @@ load("../CleanData/filtered_survey_data.Rdata")
 # Proportional Odd Model
 
 ## Prepare data (Consumer Only)
-
 ```{r}
 tmp <- sentiment.consumer %>%
   group_by(ProductName,
-           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
             neg = sum(Sentiment == "NEGATIVE"),
             stars = mean(Stars.Rating)) %>%
@@ -48,27 +47,27 @@ quantile(tmp$psi, seq(0,1,0.2))
 
 ```{r}
 
-# Calculate PSI by week and by product
+# Calculate PSI by month and by product
 psi <- sentiment.consumer %>%
   group_by(ProductName,
-           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
             neg = sum(Sentiment == "NEGATIVE"),
             stars = mean(Stars.Rating)) %>%
   mutate(psi = ifelse(pos == 0 & neg == 0, 0, 100 * (pos - neg)/(pos +  neg))) %>%
-  mutate(psi_cat = case_when((psi <= -50) ~ -75.0,
-                             (-50 < psi & psi <= 0) ~ -25.0,
-                             (0 < psi & psi <= 50) ~ 25.0,
-                             (50 < psi & psi <= 90) ~ 70.0,
+  mutate(psi_cat = case_when((psi <= 0) ~ -50.0,
+                             (0 < psi & psi <= 30) ~ 15.0,
+                             (30 < psi & psi <= 60) ~ 45.0,
+                             (60 < psi & psi <= 90) ~ 75.0,
                              (90 < psi) ~ 95.0),
          star_cat = case_when((stars < 2.5) ~ "NEGATIVE",
                               (2.5 <= stars & stars < 3.5) ~ "NEUTRAL",
                               (3.5 <= stars) ~ "POSITIVE"))
 
-# Calculate NPS by week and by product
+# Calculate NPS by month and by product
 nps <- survey.consumer %>%
   group_by(ProductName,
-           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "week")) %>%
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
   summarise(promoter = sum(NPS >= 9),
             detractor = sum(NPS <= 6),
             total = n()) %>%
@@ -124,10 +123,10 @@ data.frame(PSI = tmp_wide$psi_cat, Stars=tmp_wide$star_cat, fitted(pom))
 
 ```{r}
 
-# Calculate PSI by week and by product
+# Calculate PSI by month and by product
 psi <- sentiment.consumer %>%
   group_by(ProductName,
-           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week"),
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month"),
            Comment, Stars.Rating) %>%
   summarize(rater_pos = sum(Sentiment == "POSITIVE"),
             rater_neg = sum(Sentiment == "NEGATIVE")) %>%
@@ -139,19 +138,19 @@ psi <- sentiment.consumer %>%
             neg = sum(rater_neg),
             psi = mean(rater_psi, na.rm = TRUE),
             stars = mean(Stars.Rating)) %>%
-  mutate(psi_cat = case_when((psi <= -50) ~ -75.0,
-                             (-50 < psi & psi <= 0) ~ -25.0,
-                             (0 < psi & psi <= 50) ~ 25.0,
-                             (50 < psi & psi <= 90) ~ 70.0,
+  mutate(psi_cat = case_when((psi <= 0) ~ -50.0,
+                             (0 < psi & psi <= 30) ~ 15.0,
+                             (30 < psi & psi <= 60) ~ 45.0,
+                             (60 < psi & psi <= 90) ~ 75.0,
                              (90 < psi) ~ 95.0),
          star_cat = case_when((stars < 2.5) ~ "NEGATIVE",
                               (2.5 <= stars & stars < 3.5) ~ "NEUTRAL",
                               (3.5 <= stars) ~ "POSITIVE"))
 
-# Calculate NPS by week and by product
+# Calculate NPS by month and by product
 nps <- survey.consumer %>%
   group_by(ProductName,
-           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "week")) %>%
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
   summarise(promoter = sum(NPS >= 9),
             detractor = sum(NPS <= 6),
             total = n()) %>%
@@ -201,7 +200,7 @@ data.frame(PSI = tmp_wide$psi_cat, Stars=tmp_wide$star_cat, fitted(pom))
 
 ```{r}
 # LR test
-pchisq(81.6526, 53, lower.tail = FALSE)
+pchisq(54.7, 45, lower.tail = FALSE)
 ```
 
 
@@ -235,10 +234,5 @@ summary(baseline)
 ```
 ```{r}
 lrtest(baseline, pom)
+# POM is better fit than baseline category
 ```
-```{r}
-
-data.frame(PSI = tmp_wide$psi_cat, Stars=tmp_wide$star_cat, fitted(baseline))
-
-```
-
