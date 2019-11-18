@@ -17,6 +17,7 @@ output:
 fontsize: 12pt
 geometry: margin=1in 
 urlcolor: blue
+bibliography: ise560report.bib
 ---
 
 ```{r echo=FALSE, results='hide', message=FALSE, warning=FALSE}
@@ -32,7 +33,7 @@ library(grid)
 library(gridExtra)
 ```
 
-# Executive Summary
+\section{Executive Summary}
 
-# Introduction
+\section{Introduction}
 
