@@ -19,6 +19,7 @@ source("data_prep.R")
 ```{r}
 # States: Age class of trees; 0 to 20 yrs = 1, 21 to 40 yrs = 2, > 40 years = 3
 # Actions: Wait = 1, Cut = 2
+# p = 0.1 is probability of wildfire
 
 # Transitions
 P1 <- matrix(c(0.1, 0.9, 0, 0.1, 0, 0.9, 0.1, 0, 0.9), nrow=3, byrow=TRUE)
@@ -39,11 +40,13 @@ discount <- 0.95
 ```
 
 ```{r}
+# Objective is to maximize rewards
 #Policy Iteration
 mdp_policy_iteration(P, R, discount)
 ```
 
 ```{r}
+# Objective is to maximize rewards
 # Linear Programming
 mdp_LP(P, R, discount)
 ```
