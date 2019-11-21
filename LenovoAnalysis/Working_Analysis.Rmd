@@ -15,6 +15,7 @@ knitr::opts_chunk$set(out.width = "50%")
 knitr::opts_chunk$set(fig.align = "center")
 
 library(tidyverse)
+library(car)
 
 source("../src_lenovo_project.R")
 source("data_prep.R")
@@ -30,45 +31,8 @@ load("../CleanData/filtered_product_lists.Rdata")
 
 ```
 
-# SMB Products
-
-## Product List with Sentiment And Survey Data
-```{r}
-smb.prods
-```
-
-```{r}
-# Calculate PSI by month for SMB products
-smb.psi <- sentiment.smb %>%
-  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
-  summarise(pos = sum(Sentiment == "POSITIVE"),
-            neg = sum(Sentiment == "NEGATIVE")) %>%
-  mutate(psi = 100 * (pos - neg)/(pos +  neg))
-
-# Calculate NPS by month for SMB producs
-smb.nps <- survey.smb %>%
-  group_by(month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
-  summarise(promoter = sum(NPS >= 9),
-            detractor = sum(NPS <= 6),
-            total = n()) %>%
-  mutate(nps = 100 * (promoter - detractor) / total)
-
-ggplot() +
-  geom_line(data = smb.psi, mapping = aes(x=month, y=psi, color="PSI")) +
-  geom_line(data = smb.nps, mapping = aes(x=month, y=nps, color="NPS")) +
-  labs(title="NPS & PSI for all SMB Products")
-
-```
-
-
 
 # Commercial Products
-
-## Product List with Sentiment And Survey Data
-```{r}
-
-comm.prods
-```
 
 
 ```{r}
@@ -110,7 +74,8 @@ tmp %>%
 comm.psi.week <- sentiment.comm %>%
   group_by(week = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
-            neg = sum(Sentiment == "NEGATIVE")) %>%
+            neg = sum(Sentiment == "NEGATIVE"),
+            stars = mean(Stars.Rating)) %>%
   mutate(psi = 100 * (pos - neg)/(pos +  neg))
 
 # Calculate NPS by month for all Commercial producs
@@ -121,16 +86,65 @@ comm.nps.week <- survey.comm %>%
             total = n()) %>%
   mutate(nps = 100 * (promoter - detractor) / total)
 
+# Drop first week and last two weeks since there is so little NPS data in those weeks 
+# The unusually small number of surveys in those weeks seems anomalous
+
 ggplot() +
-  geom_line(data = comm.psi.week, mapping = aes(x=week, y=psi, color="PSI")) +
-  geom_line(data = comm.nps.week, mapping = aes(x=week, y=nps, color="NPS")) +
+  geom_line(data = comm.psi.week[2:54,], mapping = aes(x=week, y=psi, color="PSI")) +
+  geom_line(data = comm.nps.week[2:54,], mapping = aes(x=week, y=nps, color="NPS")) +
+  geom_line(data = comm.psi.week[2:54,], mapping = aes(x=week, y=stars, color="stars"))
   labs(title="NPS & PSI for all Commercial Products")
 ```
 
 ```{r}
 # Plot NPS by PSI
-tmp <- merge(comm.nps.week, comm.psi.week, all=T) %>%
+tmp <- merge(comm.nps.week[2:54,], comm.psi.week[2:54,], all=T) %>%
   select(-promoter, -detractor, -total, -pos, -neg)  
+
+tmp %>%
+  ggplot() +
+  geom_point(mapping=aes(x=psi, y=nps)) +
+  labs(x="x", y="y")
+
+```
+
+
+# Consumer Products
+
+## Product List
+```{r}
+#consumer.prods
+```
+
+```{r}
+# Calculate PSI by month for all Consumer products
+consumer.psi.month <- sentiment.consumer %>%
+  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month"),
+           SeriesName) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = ifelse(pos == 0 & neg == 0, 0, 100 * (pos - neg)/(pos +  neg)))
+
+# Calculate NPS by month for all Consumer producs
+consumer.nps.month <- survey.consumer %>%
+  group_by(month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month"), 
+           SeriesName) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total)
+
+tmp <- inner_join(consumer.nps.month, consumer.psi.month)
+
+tmp %>%
+ggplot() +
+  geom_line(mapping = aes(x=month, y=psi, colour=factor(SeriesName))) +
+  geom_line(mapping = aes(x=month, y=nps, colour=factor(SeriesName))) +
+  labs(title="NPS & PSI for all Commercial Products")
+```
+
+```{r}
+# Plot NPS by PSI
 
 tmp %>%
   ggplot() +
@@ -138,183 +152,34 @@ tmp %>%
 
 ```
 
-```{r include=FALSE}
-# Calculate PSI by month and by product
-comm.psi.month_prod <- sentiment.comm %>%
-  group_by(ProductName,
-           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+## By week
+
+```{r}
+# Calculate PSI by week for all Consumer products
+consumer.psi.week <- sentiment.consumer %>%
+  group_by(week = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
-            neg = sum(Sentiment == "NEGATIVE")) %>%
+            neg = sum(Sentiment == "NEGATIVE"),
+            stars = mean(Stars.Rating)) %>%
   mutate(psi = 100 * (pos - neg)/(pos +  neg))
 
-# Calculate NPS by month for all Commercial producs
-comm.nps.month_prod <- survey.comm %>%
-  group_by(ProductName,
-           month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
-  summarise(promoter = sum(NPS >= 9),
-            detractor = sum(NPS <= 6),
-            total = n()) %>%
-  mutate(nps = 100 * (promoter - detractor) / total)
-
-tmp <- merge(comm.nps.month_prod, comm.psi.month_prod, all=T) %>%
-  select(-promoter, -detractor, -total, -pos, -neg) %>%
-  gather(key = type, value=score, -ProductName, -month) 
-
-for (i in unique(tmp$ProductName))
-{
-  print(ggplot(data=tmp[tmp$ProductName==i,],
-              mapping = aes(x=month, y=score, color=factor(type))) +
-    geom_point() +
-    geom_line() +
-    labs(title=paste("NPS & PSI for Product ",i)))
-}
-```
-
-
-```{r}
-# Calculate PSI by month and by Series
-# Series is in the NPS file but not sentiment file so we need
-# to do some massaging to match that data up first; 
-# this is kludgy but works 
-tmp1 <- survey.comm %>%
-  select(ProductName, SeriesName) %>%
-  unique()
-
-tmp2 <- left_join(sentiment.comm, tmp1, by=c("ProductName"))
-
-comm.psi.month_series <- tmp2 %>%
-  group_by(SeriesName,
-           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
-  summarise(pos = sum(Sentiment == "POSITIVE"),
-            neg = sum(Sentiment == "NEGATIVE")) %>%
-  mutate(psi = 100 * (pos - neg)/(pos +  neg))
-
-# Calculate NPS by month and series
-comm.nps.month_series <- survey.comm %>%
-  group_by(SeriesName,
-           month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
-  summarise(promoter = sum(NPS >= 9),
-            detractor = sum(NPS <= 6),
-            total = n()) %>%
-  mutate(nps = 100 * (promoter - detractor) / total)
-
-tmp <- merge(comm.nps.month_series, comm.psi.month_series, all=T) %>%
-  select(-promoter, -detractor, -total, -pos, -neg) %>%
-  gather(key = type, value=score, -SeriesName, -month) 
-
-for (i in unique(tmp$Series))
-{
-  print(ggplot(data=tmp[tmp$Series==i,],
-              mapping = aes(x=month, y=score, color=factor(type))) +
-    geom_point() +
-    geom_line() +
-    labs(title=paste("NPS & PSI for Series ",i)))
-}
-```
-
-```{r}
-# Based on above plots the following families look like they have sufficient data
-# YOGA, P SERIES WORKSTATION, T SERIES, X SERIES
-# so let's keep those separate and group the rest
-
-fam <- c("YOGA", "P SERIES WORKSTATION", "T SERIES", "X SERIES")
-
-tmp1 <- survey.comm %>%
-  select(ProductName, SeriesName) %>%
-  unique()
-
-tmp2 <- left_join(sentiment.comm, tmp1, by=c("ProductName"))
-
-comm.psi.month_fam <- tmp2 %>%
-  mutate(fam = ifelse(SeriesName %in% fam, SeriesName, "OTHER")) %>%
-  group_by(fam,
-           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
-  summarise(pos = sum(Sentiment == "POSITIVE"),
-            neg = sum(Sentiment == "NEGATIVE")) %>%
-  mutate(psi = 100 * (pos - neg)/(pos +  neg))
-
-# Calculate NPS by month and series
-comm.nps.month_fam <- survey.comm %>%
-  mutate(fam = ifelse(SeriesName %in% fam, SeriesName, "OTHER")) %>%
-  group_by(fam,
-           month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
-  summarise(promoter = sum(NPS >= 9),
-            detractor = sum(NPS <= 6),
-            total = n()) %>%
-  mutate(nps = 100 * (promoter - detractor) / total)
-
-tmp <- merge(comm.nps.month_fam, comm.psi.month_fam, all=T) %>%
-  select(-promoter, -detractor, -total, -pos, -neg) %>%
-  gather(key = type, value=score, -fam, -month) 
-
-for (i in unique(tmp$fam))
-{
-  print(ggplot(data=tmp[tmp$fam==i,],
-              mapping = aes(x=month, y=score, color=factor(type))) +
-    geom_point() +
-    geom_line() +
-    labs(title=paste("NPS & PSI for Series ",i)))
-}
-
-```
-
-```{r}
-# Let's try shifting the time windows
-tmp <-  comm.psi.month_fam %>%
-  mutate(month = month %m+% months(1)) %>%
-  merge(comm.nps.month_fam, all=T) %>%
-  drop_na()
-
-tmp %>%
-  select(-promoter, -detractor, -total, -pos, -neg) %>%
-  ggplot() +
-  geom_point(mapping = aes(x=psi, y=nps, color=factor(fam)))
-
-```
-
-```{r}
-mdl <- lm(nps ~ psi + fam, data=tmp)
-summary(mdl)
-plot(mdl)
-plot(mdl$fitted.values, tmp$nps)
-```
-```{r}
-
-```
-
-# Consumer Products
-
-## Product List
-```{r}
-consumer.prods
-```
-
-```{r}
-# Calculate PSI by month for all Consumer products
-consumer.psi.month <- sentiment.consumer %>%
-  group_by(month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
-  summarise(pos = sum(Sentiment == "POSITIVE"),
-            neg = sum(Sentiment == "NEGATIVE")) %>%
-  mutate(psi = 100 * (pos - neg)/(pos +  neg))
-
-# Calculate NPS by month for all Commercial producs
-consumer.nps.month <- survey.consumer %>%
-  group_by(month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+# Calculate NPS by month for all Consumer producs
+consumer.nps.week <- survey.consumer %>%
+  group_by(week = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "week")) %>%
   summarise(promoter = sum(NPS >= 9),
             detractor = sum(NPS <= 6),
             total = n()) %>%
   mutate(nps = 100 * (promoter - detractor) / total)
 
 ggplot() +
-  geom_line(data = consumer.psi.month, mapping = aes(x=month, y=psi, color="PSI")) +
-  geom_line(data = consumer.nps.month, mapping = aes(x=month, y=nps, color="NPS")) +
-  labs(title="NPS & PSI for all Consumer Products")
+  geom_line(data = consumer.psi.week, mapping = aes(x=week, y=psi, color="PSI")) +
+  geom_line(data = consumer.nps.week, mapping = aes(x=week, y=nps, color="NPS")) +
+  labs(title="NPS & PSI for all Commercial Products")
 ```
 
 ```{r}
 # Plot NPS by PSI
-tmp <- merge(consumer.nps.month, consumer.psi.month, all=T) %>%
-  select(-promoter, -detractor, -total, -pos, -neg)  
+tmp <- merge(consumer.nps.week, consumer.psi.week, all=T)   
 
 tmp %>%
   ggplot() +
@@ -323,52 +188,40 @@ tmp %>%
 ```
 
 ```{r}
-# Calculate PSI by month and by Series
-# Series is in the NPS file but not sentiment file so we need
-# to do some massaging to match that data up first; 
-# this is kludgy but works 
-tmp1 <- survey.consumer %>%
-  select(ProductName, SeriesName) %>%
-  unique()
-
-tmp2 <- left_join(sentiment.consumer, tmp1, by=c("ProductName"))
-
-consumer.psi.month_series <- tmp2 %>%
-  group_by(SeriesName,
-           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
-  summarise(pos = sum(Sentiment == "POSITIVE"),
-            neg = sum(Sentiment == "NEGATIVE")) %>%
-  mutate(psi = 100 * (pos - neg)/(pos +  neg))
-
-# Calculate NPS by month and series
-consumer.nps.month_series <- survey.consumer %>%
-  group_by(SeriesName,
-           month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
-  summarise(promoter = sum(NPS >= 9),
-            detractor = sum(NPS <= 6),
-            total = n()) %>%
-  mutate(nps = 100 * (promoter - detractor) / total)
-
-tmp <- merge(consumer.nps.month_series, consumer.psi.month_series, all=T) %>%
-  select(-promoter, -detractor, -total, -pos, -neg) %>%
-  gather(key = type, value=score, -SeriesName, -month) 
-
-for (i in unique(tmp$Series))
-{
-  print(ggplot(data=tmp[tmp$Series==i,],
-              mapping = aes(x=month, y=score, color=factor(type))) +
-    geom_point() +
-    geom_line() +
-    labs(title=paste("NPS & PSI for Series ",i)))
-}
-
-tmp2 <- merge(consumer.nps.month_series, consumer.psi.month_series, all=T)
- 
-
-tmp2 %>%
-  select(-promoter, -detractor, -total, -pos, -neg)
-  ggplot() +
-  geom_point(mapping = aes(x=psi, y=nps, color=factor(SeriesName)))
+# First fit OLS model
+fit.ols <- lm(tmp$nps ~ tmp$psi)
+summary(fit.ols)
+plot(fit.ols)
 ```
 
+```{r}
+# Since residuals are heteroskedastic, try WLS model
+fit.wls <- lm(consumer.nps.week$nps ~ consumer.psi.week$psi,
+              weights = 1/fitted(fit.ols)^2)
+summary(fit.wls)
+plot(fit.wls)
+plot(tmp$psi, tmp$nps)
+abline(coef=fit.wls$coefficients, col="red")
+abline(coef=fit.ols$coefficients, col="blue")
+```
+```{r}
+# See if inverse response plot tells us anything
+fit2.ols <- lm((tmp$nps+100) ~ tmp$psi)
+invResPlot(fit2.ols)
+```
+```{r}
+fit3.ols <- lm((tmp$nps)^0.25 ~ tmp$psi)
+summary(fit3.ols)
+plot(fit3.ols)
+plot(tmp$psi, tmp$nps)
+points(tmp$psi[1:55], fitted(fit3.ols)^4, col="red")
+```
+
+```{r}
+fit4.ols <- lm(tmp$nps ~ tmp$psi + tmp$psi^2 + tmp$psi^3 + tmp$psi^4)
+summary(fit4.ols)
+plot(fit4.ols)
+plot(tmp$psi, tmp$nps)
+points(tmp$psi, fitted(fit4.ols), col="red")
+```
 

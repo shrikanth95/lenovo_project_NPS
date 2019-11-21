@@ -1,5 +1,5 @@
 ---
-title: "ISE 560 Project Proposal"
+title: "ISE 560 Project Report"
 author: "Shawn Markham, Melissa Wong, Shrikanth Yadav & Lekhana Yennam"
 date: \today
 header-includes:
@@ -9,16 +9,40 @@ header-includes:
    - \onehalfspacing
    - \usepackage{enumitem}
    - \usepackage{float}
+   - \pagenumbering{gobble}
 output: 
   pdf_document:
     latex_engine: xelatex
     number_sections: true
     fig_caption: true
+documentclass: article
 fontsize: 12pt
 geometry: margin=1in 
 urlcolor: blue
 bibliography: ise560report.bib
 ---
+
+\begin{figure}[b!]
+  \centering
+  \includegraphics[width = 0.48\textwidth]{images/ise_logo.pdf}
+\end{figure}
+
+\newpage
+
+\pagenumbering{roman}
+\setcounter{page}{2}
+
+\tableofcontents
+\newpage
+\listoffigures
+\listoftables
+\newpage
+
+\pagenumbering{arabic}
+
+\section{Executive Summary}
+
+\section{Introduction}
 
 ```{r echo=FALSE, results='hide', message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -33,7 +57,7 @@ library(grid)
 library(gridExtra)
 ```
 
-\section{Executive Summary}
+\clearpage
+\appendix
 
-\section{Introduction}
-
+\section{Test Appendix}
