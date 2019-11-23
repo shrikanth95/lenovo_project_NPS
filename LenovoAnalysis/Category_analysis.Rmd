@@ -1,0 +1,159 @@
+---
+title: "Analysis with Category for Linear models"
+author: "ISE 560"
+date: "11/22/2019"
+output: html_document
+---
+
+```{r}
+rm(list = ls())
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width = "50%")
+knitr::opts_chunk$set(fig.align = "center")
+
+library(tidyverse)
+source("../src_lenovo_project.R")
+source("data_prep.R")
+filter_raw_data()
+library("dplyr")
+library("reshape2")# for dcast functio
+library("lubridate")
+library(ggplot2)
+library(cowplot)
+
+load("../CleanData/filtered_sentiment_data.Rdata")
+load("../CleanData/filtered_product_lists.Rdata")
+load("../CleanData/filtered_survey_data.Rdata")
+
+```
+
+
+## Isolation of Cateogries in Product Series for consumers
+
+```{r}
+tmp1 <- survey.consumer %>%
+  select(ProductName, SeriesName)%>%
+  unique()
+
+tmp2 <- left_join(sentiment.consumer, tmp1, by=c("ProductName"))
+
+psi.series <- tmp2 %>%
+  group_by(SeriesName, Category,
+           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))
+
+# Calculate NPS by month and series
+nps.series <- survey.consumer %>%
+  group_by(SeriesName,  month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total)
+
+psi.series = psi.series[complete.cases(psi.series),]
+nps.series = nps.series[complete.cases(nps.series),]
+# Replace spaces and / from the category observations for future use.
+psi.series$Category <- sub(" ", "_", psi.series$Category)
+psi.series$Category <- sub("/", " ", psi.series$Category)
+unique(psi.series$Category)
+psi.series$Category <- sub(" ", "", psi.series$Category)
+psi.series$Category <- sub(" ", "", psi.series$Category)
+```
+
+
+```{r}
+# 
+summary.cat = unique(psi.series[,c(1,2)])
+summary.cat = cbind(summary.cat, size = rep(0,nrow(summary.cat)), correlation = rep(0,nrow(summary.cat)))
+
+for(i in 1:nrow(summary.cat)){
+    slice = merge(psi.series[(psi.series$SeriesName==summary.cat$SeriesName[i])& (psi.series$Category==summary.cat$Category[i]),c("month", "psi")],
+                  nps.series[nps.series$SeriesName==summary.cat$SeriesName[i],c("month", "nps")], by = "month")
+    summary.cat$size[i] = nrow(slice)
+    if(nrow(slice)>8){
+      summary.cat$correlation[i] = cor(slice$psi, slice$nps)
+    }
+}
+
+summary.cat
+
+```
+
+
+```{r}
+best.corr <- summary.cat[abs(summary.cat$correlation)>0.3,]
+best.corr <- best.corr[complete.cases(best.corr),]
+for(i in 1:nrow(best.corr)){
+  slice = merge(psi.series[(psi.series$SeriesName==best.corr$SeriesName[i])& (psi.series$Category==best.corr$Category[i]),c("month", "psi")],  nps.series[nps.series$SeriesName==best.corr$SeriesName[i],c("month", "nps")], by = "month")
+  print(ggplot(slice, aes(x = psi, y = nps)) + geom_point()+ggtitle(paste(best.corr$SeriesName[i], ", Category: ",best.corr$Category[i],sep = "")))
+}
+```
+
+## Test without outliers -- 
+Conclusion: the number of useful combinations falls to 76 with highest correlation at 
+
+```{r}
+# 
+summary.cat = unique(psi.series[,c(1,2)])
+summary.cat = cbind(summary.cat, size = rep(0,nrow(summary.cat)), correlation = rep(0,nrow(summary.cat)))
+# Remove outliers (100 and -100)
+
+for(i in 1:nrow(summary.cat)){
+    slice = merge(psi.series[(psi.series$SeriesName==summary.cat$SeriesName[i])& (psi.series$Category==summary.cat$Category[3]),c("month", "psi")],
+                  nps.series[nps.series$SeriesName==summary.cat$SeriesName[i],c("month", "nps")], by = "month")
+    summary.cat$size[i] = nrow(slice)
+    if(nrow(slice)>8){
+      slice = slice[(slice$psi!=100)&(slice$psi!=-100),]
+      summary.cat$correlation[i] = cor(slice$psi, slice$nps)
+      # print(ggplot(slice, aes(x = psi, y = nps)) + geom_point())
+    }
+}
+
+summary.cat
+
+```
+
+
+
+```{r}
+best.corr.clip <- summary.cat[abs(summary.cat$correlation)>0.3,]
+best.corr.clip <- best.corr[complete.cases(best.corr),]
+for(i in 1:nrow(best.corr.clip)){
+  slice = merge(psi.series[(psi.series$SeriesName==best.corr.clip$SeriesName[i])& (psi.series$Category==best.corr.clip$Category[i]),c("month", "psi")],
+                  nps.series[nps.series$SeriesName==best.corr.clip$SeriesName[i],c("month", "nps")], by = "month")
+  print(ggplot(slice, aes(x = psi, y = nps)) + geom_point()+ggtitle(paste(best.corr.clip$SeriesName[i], ", Category: ",best.corr.clip$Category[i],sep = "")))
+}
+```
+
+## Summary
+- with outliers
+```{r}
+unique(best.corr$SeriesName)
+```
+
+- without outliers
+```{r}
+unique(best.corr.clip$Category)
+```
+
+# Linear Model for significant time series
+
+```{r}
+category.ts = psi.series %>% dcast(month+SeriesName~Category,value.var = 'psi')
+main.working= merge(category.ts,nps.series[,-c(3,4,5)],by = c("month", "SeriesName"), all = T)
+list.series = unique(best.corr.clip$SeriesName)
+list.cat = unique(best.corr$Category)
+main.working = main.working[complete.cases(main.working$nps),]
+for(i in 1:length(list.series)){
+  sig.cat = best.corr.clip$Category[best.corr.clip$SeriesName == list.series[i]]
+  equation = formula(paste0('nps','~',paste0(as.character(sig.cat),collapse = "+"),collapse = ""))
+  slice = main.working[main.working$SeriesName == list.series[i],c('nps', sig.cat)]
+  model = slice %>% lm(formula = equation,na.action(na.omit))
+  print(summary(model)$coefficients[,4])
+}
+```
+
+

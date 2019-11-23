@@ -1,0 +1,27 @@
+---
+title: 'Lenovo project: Analysis with telemetry'
+---
+title: "Lenovo_project"
+author: "ISE 560"
+date: "10/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("dplyr")
+library("lubridate")
+library(ggplot2)
+library(cowplot)
+source('../src_lenovo_project.R')
+
+```
+
+# Extraction
+
+```{r}
+telemetry.con <- read.csv("../RawData/Driver_Health_consumer_ideapad.csv", header = TRUE)
+telemetry.comm <- read.csv("../RawData/Driver_Health_consumer_ideapad.csv", header = TRUE)
+
+ggplot(data = telemetry.con,aes(x=Percent.Impacted))+ geom_bar()
+```
