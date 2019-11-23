@@ -22,7 +22,9 @@ filter_raw_data <- function()
   
   
   # Read in all NPS data
+  #survey <- read.csv("../RawData/Lenovo_Survey_Data_pNPS.csv") %>%
   survey <- read.csv("../RawData/Lenovo_Survey_Data_pNPS_Rev2.csv") %>%
+    
     mutate(ProductName = I(toupper(as.character(Product))), 
            SeriesName = I(toupper(as.character(Series))))
   
