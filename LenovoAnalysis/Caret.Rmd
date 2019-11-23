@@ -1,0 +1,174 @@
+---
+title: "Caret"
+author: "Melissa Wong"
+date: "November 22, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+knitr::opts_chunk$set(fig.align = "center")
+
+library(tidyverse)
+library(car)
+library(caret)
+
+source("../src_lenovo_project.R")
+source("data_prep.R")
+source("helper_calcs.R")
+```
+
+
+```{r}
+filter_raw_data()
+
+load("../CleanData/filtered_sentiment_data.Rdata")
+load("../CleanData/filtered_survey_data.Rdata")
+load("../CleanData/filtered_product_lists.Rdata")
+
+```
+
+```{r}
+# combine commercial and consumer so we have more dof
+sentiment <- rbind(sentiment.comm, sentiment.consumer)
+survey <- rbind(survey.comm, survey.consumer)
+```
+
+```{r}
+# Percentage split for train/test
+TRAIN = 0.8
+TEST = 1-TRAIN
+
+# Do stratified random sample by Series and by month
+sentiment.train <- sentiment %>%
+  group_by(SeriesName,
+           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  sample_frac(TRAIN)
+
+sentiment.test <- anti_join(sentiment, sentiment.train) %>%
+  group_by(SeriesName,
+           month = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month"))
+
+survey.train <- survey %>%
+  group_by(SeriesName,
+           month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  sample_frac(TRAIN)
+
+survey.test <- anti_join(survey, survey.train) %>%
+   group_by(SeriesName,
+           month = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month"))
+
+```
+```{r}
+# Calculate PSI, NPS and average star ratings
+psi.train <- calcPSI(sentiment.train)
+psi.test <- calcPSI(sentiment.test)
+nps.test <- calcNPS(survey.test)
+nps.train <- calcNPS(survey.train)
+```
+
+```{r}
+# Now merge data sets and drop any rows with NAs
+all.train <- inner_join(psi.train, nps.train) %>%
+  drop_na()
+
+all.test <- merge(psi.test, nps.test) %>%
+  drop_na()
+```
+
+```{r}
+ggplot(all.train, aes(x = psi, y=nps)) +
+  geom_point(alpha=0.3)
+```
+
+```{r}
+# Look at scatterplots of PSI x NPS by Series
+
+ggplot(all.train, aes(x=psi, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE) +
+  facet_wrap(~SeriesName)
+```
+```{r}
+ggplot(all.train, aes(x=neg, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE) +
+  facet_wrap(~SeriesName)
+```
+
+```{r}
+# Fit model
+mdl1 <- lm(nps ~ SeriesName + psi + SeriesName:psi, data=all.train)
+summary(mdl1)
+plot(mdl1)
+```
+
+```{r}
+# Look at scatterplots fitted vs actual for train data set
+
+cbind(all.train, fit=fitted(mdl1)) %>%
+ggplot(aes(x=psi, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE) +
+  geom_point(aes(y=fit), alpha=0.3, color="red") +
+  facet_wrap(~SeriesName)
+```
+
+```{r}
+# Look at scatterplots fitted vs actual for test data set
+
+cbind(all.test, 
+      pred=predict(mdl1, data.frame(SeriesName = all.test$SeriesName, psi=all.test$psi))) %>%
+ggplot(aes(x=psi, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE) +
+  geom_point(aes(y=pred), alpha=0.3, color="red") +
+  facet_wrap(~SeriesName)
+```
+
+# K-Fold Cross Validation
+```{r}
+
+psi <- sentiment %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  calcPSI()
+
+nps <- survey %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  calcNPS()
+
+# Combine to get data.frame with nps and psi matching by date and Series
+# Drop any Series with less than 3 data points (insufficient data)
+all <- inner_join(psi, nps) %>%
+  mutate(occurs = n()) %>%
+  filter(occurs > 3) %>%
+  drop_na()
+
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl2 <- train(nps ~ SeriesName*psi + stars, data=all,
+              method = "lm", trControl = train.control)
+
+mdl2
+
+summary(mdl2)
+```
+```{r}
+plot(mdl2$finalModel)
+```
+
+```{r}
+# Look at scatterplots fitted vs actual for test data set
+
+cbind(all, 
+      pred=predict(mdl2$finalModel)) %>%
+ggplot(aes(x=psi, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE) +
+  geom_point(aes(y=pred), alpha=0.3, color="red") +
+  facet_wrap(~SeriesName)
+```
+
