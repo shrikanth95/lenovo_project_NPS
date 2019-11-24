@@ -22,7 +22,9 @@ filter_raw_data <- function()
   
   
   # Read in all NPS data
+  #survey <- read.csv("../RawData/Lenovo_Survey_Data_pNPS.csv") %>%
   survey <- read.csv("../RawData/Lenovo_Survey_Data_pNPS_Rev2.csv") %>%
+    
     mutate(ProductName = I(toupper(as.character(Product))), 
            SeriesName = I(toupper(as.character(Series))))
   
@@ -45,14 +47,16 @@ filter_raw_data <- function()
   sentiment.comm.all <- sentiment %>%
     filter(Business.Group == "LENOVO - COMMERCIAL" |
           (Business.Group == "LENOVO - SMB" & SeriesName == "V SERIES") |
-          (Business.Group == "LENOVO - SMB" & SeriesName == "E SERIES"))  
+          (Business.Group == "LENOVO - SMB" & SeriesName == "E SERIES"))  %>%
+    mutate(Segment = "COMMERCIAL")
   
   
   survey.comm.all <- survey %>%
     filter(Segment == "Lenovo - Commercial" |
           (Segment == "Lenovo - SMB" & SeriesName == "V SERIES") |
           (Segment == "Lenovo - SMB" & SeriesName == "E SERIES"))  %>%
-    mutate(NPS = as.numeric(as.character(Product.NPS))) %>%
+    mutate(NPS = as.numeric(as.character(Product.NPS)),
+           Segment = "COMMERCIAL") %>%
     drop_na(NPS)
   
   # Get set of Commercial products
@@ -107,14 +111,17 @@ filter_raw_data <- function()
   sentiment.consumer.all <- sentiment %>%
     filter(Business.Group == "LENOVO - CONSUMER" |
           (Business.Group == "LENOVO - SMB" & SeriesName == "B SERIES") |
-          (Business.Group == "LENOVO - SMB" & SeriesName == "M SERIES")) 
+          (Business.Group == "LENOVO - SMB" & SeriesName == "M SERIES")) %>%
+    mutate(Segment = "CONSUMER")
   
+
   
   survey.consumer.all <- survey %>%
     filter(Segment == "Lenovo - Consumer" |
           (Segment == "Lenovo - SMB" & SeriesName == "B SERIES") |
           (Segment == "Lenovo - SMB" & SeriesName == "M SERIES")) %>%
-    mutate(NPS = as.numeric(as.character(Product.NPS))) %>%
+    mutate(NPS = as.numeric(as.character(Product.NPS)),
+           Segment = "CONSUMER") %>%
     drop_na(NPS)
   
   # Get set of Consumer products

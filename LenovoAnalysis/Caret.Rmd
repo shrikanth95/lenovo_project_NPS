@@ -1,0 +1,378 @@
+---
+title: "Caret"
+author: "Melissa Wong"
+date: "November 22, 2019"
+output:
+  pdf_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+knitr::opts_chunk$set(fig.align = "center")
+
+library(tidyverse)
+library(car)
+library(caret)
+
+source("../src_lenovo_project.R")
+source("data_prep.R")
+source("helper_calcs.R")
+```
+
+
+```{r}
+filter_raw_data()
+
+load("../CleanData/filtered_sentiment_data.Rdata")
+load("../CleanData/filtered_survey_data.Rdata")
+load("../CleanData/filtered_product_lists.Rdata")
+
+```
+
+
+# K-Fold Cross Validation using caret (By Month)
+
+## Consumer
+```{r}
+# Consumer Only
+psi <- sentiment.consumer.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  calcPSI()
+
+nps <- survey.consumer.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  calcNPS()
+
+# Combine to get data.frame with nps and psi matching by date and Series
+# Drop any Series with less than 3 data points (insufficient data)
+all <- inner_join(psi, nps) %>%
+  filter(total > 2) %>%
+  mutate(occurs = n()) %>%
+  filter(occurs > 3) %>%
+  drop_na()
+
+# Look at scatterplots 
+
+all %>%
+ggplot(aes(x=psi, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE, color="darkgrey") +
+  facet_wrap(~SeriesName)
+```
+
+```{r}
+# Fit model with interation term
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl1 <- train(nps ~ SeriesName + psi + SeriesName:psi + stars, data=all,
+              method = "lm", trControl = train.control)
+
+mdl1
+```
+
+```{r}
+summary(mdl1$finalModel)
+```
+
+```{r}
+# Fit model without interaction term
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl2 <- train(nps ~ SeriesName + psi + stars, data=all,
+              method = "lm", trControl = train.control)
+
+mdl2
+```
+
+```{r}
+summary(mdl2)
+```
+
+```{r}
+plot(mdl2$finalModel)
+```
+```{r}
+anova(mdl2$finalModel, mdl1$finalModel)
+# Conclude Interaction term does not significantly improve fit
+```
+
+```{r}
+# Look at scatterplots fitted vs actual
+
+cbind(all, 
+      pred1=predict(mdl1$finalModel),
+      pred2=predict(mdl2$finalModel)) %>%
+ggplot(aes(x=psi, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE, color="darkgrey") +
+  geom_point(aes(y=pred1), alpha=0.3, color="red") +
+  geom_point(aes(y=pred2), alpha=0.3, color="blue") +
+  facet_wrap(~SeriesName)
+```
+
+Consumer Linear Model: $NPS \sim Series + PSI + Stars$
+
+## Commercial (By Month)
+
+```{r}
+# Commercial Only
+psi <- sentiment.comm.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  calcPSI()
+
+nps <- survey.comm.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  calcNPS()
+
+# Combine to get data.frame with nps and psi matching by date and Series
+# Drop any Series with less than 3 data points (insufficient data)
+all <- inner_join(psi, nps) %>%
+  #filter(total > 2) %>%
+  mutate(occurs = n()) %>%
+  filter(occurs > 3) %>%
+  drop_na()
+
+# Look at scatterplots 
+
+all %>%
+ggplot(aes(x=psi, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE, color="darkgrey") +
+  facet_wrap(~SeriesName)
+```
+
+```{r}
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl3 <- train(nps ~ SeriesName*psi + stars, data=all,
+              method = "lm", trControl = train.control)
+
+mdl3
+```
+
+
+```{r}
+summary(mdl3)
+```
+```{r}
+plot(mdl3$finalModel)
+```
+
+```{r}
+# Fit model without stars
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl4 <- train(nps ~ SeriesName*psi, data=all,
+              method = "lm", trControl = train.control)
+
+mdl4
+```
+
+```{r}
+summary(mdl4$finalModel)
+```
+```{r}
+plot(mdl4$finalModel)
+```
+```{r}
+anova(mdl3$finalModel, mdl4$finalModel)
+```
+
+```{r}
+# Look at scatterplots fitted vs actual
+
+cbind(all, 
+      pred3=predict(mdl3$finalModel),
+      pred4=predict(mdl4$finalModel)) %>%
+ggplot(aes(x=psi, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE, color="darkgrey") +
+  geom_point(aes(y=pred3), alpha=0.3, color="red") +
+  geom_point(aes(y=pred4), alpha=0.3, color="blue") +
+  facet_wrap(~SeriesName)
+```
+
+Commercial Linear Model: $NPS \sim Series + PSI + Series:PSI$
+
+# K-Fold Cross Validation using caret (By Week)
+
+## Consumer
+```{r}
+# Consumer Only
+psi <- sentiment.consumer.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
+  calcPSI()
+
+nps <- survey.consumer.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "week")) %>%
+  calcNPS()
+
+# Combine to get data.frame with nps and psi matching by date and Series
+# Drop any Series with less than 3 data points (insufficient data)
+all <- inner_join(psi, nps) %>%
+  filter(total > 2) %>%
+  mutate(occurs = n()) %>%
+  filter(occurs > 3) %>%
+  drop_na()
+
+# Look at scatterplots 
+
+all %>%
+ggplot(aes(x=psi, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE, color="darkgrey") +
+  facet_wrap(~SeriesName)
+```
+
+
+```{r}
+# Fit model with interation term
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl1 <- train(nps ~ SeriesName + psi + SeriesName:psi + stars, data=all,
+              method = "lm", trControl = train.control)
+
+mdl1
+```
+```{r}
+summary(mdl1$finalModel)
+```
+```{r}
+plot(mdl1$finalModel)
+```
+
+```{r}
+# Fit model without interation term
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl2<- train(nps ~ SeriesName + psi + stars, data=all,
+              method = "lm", trControl = train.control)
+
+mdl2
+```
+```{r}
+summary(mdl2$finalModel)
+```
+```{r}
+anova(mdl1$finalModel, mdl2$finalModel)
+# Conclude interaction term does not significantly improve fit
+```
+
+```{r}
+# Fit model without stars
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl3 <- train(nps ~ SeriesName + psi, data=all,
+              method = "lm", trControl = train.control)
+
+mdl3
+```
+```{r}
+summary(mdl3$finalModel)
+```
+```{r}
+anova(mdl2$finalModel, mdl3$finalModel)
+# Conclude including stars does not significantly improve model fit
+```
+
+```{r}
+# Look at scatterplots fitted vs actual
+
+cbind(all, 
+      pred1=predict(mdl2$finalModel),
+      pred2=predict(mdl3$finalModel)) %>%
+ggplot(aes(x=psi, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE, color="darkgrey") +
+  geom_point(aes(y=pred1), alpha=0.3, color="red") +
+  geom_point(aes(y=pred2), alpha=0.3, color="blue") +
+  facet_wrap(~SeriesName)
+```
+
+Consumer Linear Model: $NPS \sim Series + PSI$
+
+## Commerical (By Week)
+
+```{r}
+# Commercial Only
+psi <- sentiment.comm.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
+  calcPSI()
+
+nps <- survey.comm.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "week")) %>%
+  calcNPS()
+
+# Combine to get data.frame with nps and psi matching by date and Series
+# Drop any Series with less than 3 data points (insufficient data), less than 2 surveys or 
+# less than 2 sentiment entries
+all <- inner_join(psi, nps) %>%
+  filter(total > 1 & (pos + neg) > 1) %>%
+  mutate(occurs = n()) %>%
+  filter(occurs > 3) %>%
+  drop_na()
+
+# Look at scatterplots 
+
+all %>%
+ggplot(aes(x=psi, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE, color="darkgrey") +
+  facet_wrap(~SeriesName)
+```
+
+```{r}
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl4 <- train(nps ~ SeriesName*psi + stars, data=all,
+              method = "lm", trControl = train.control)
+
+mdl4
+```
+
+```{r}
+summary(mdl4$finalModel)
+```
+
+```{r}
+# Fit model without stars
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl5 <- train(nps ~ SeriesName*psi, data=all,
+              method = "lm", trControl = train.control)
+
+mdl5
+```
+
+```{r}
+summary(mdl5$finalModel)
+```
+
+```{r}
+plot(mdl5$finalModel)
+```
+
+```{r}
+# Look at scatterplots fitted vs actual
+
+cbind(all, 
+      pred1=predict(mdl4$finalModel),
+      pred2=predict(mdl5$finalModel)) %>%
+ggplot(aes(x=psi, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE, color="darkgrey") +
+  geom_point(aes(y=pred1), alpha=0.3, color="red") +
+  geom_point(aes(y=pred2), alpha=0.3, color="blue") +
+  facet_wrap(~SeriesName)
+```
+
+Commericial Linear Model: $NPS \sim Series + PSI + Series:PSI$
