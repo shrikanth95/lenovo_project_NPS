@@ -16,6 +16,7 @@ knitr::opts_chunk$set(out.width = "50%")
 library(tidyverse)
 
 source("data_prep.R")
+source("helper_calcs.R")
 ```
 
 ```{r}
@@ -28,53 +29,6 @@ load("../CleanData/filtered_survey_data.Rdata")
 
 # PSI Transitions
 
-```{r}
-PSITransitions <- function(data, interval, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
-{
-  # browser()
-  
-  data.psi <- data %>%
-    group_by(time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = interval)) %>%
-    summarise(pos = sum(Sentiment == "POSITIVE"),
-              neg = sum(Sentiment == "NEGATIVE"),
-              stars = mean(Stars.Rating)) %>%
-    mutate(psi = ifelse(pos == 0 & neg == 0, 0, 100 * (pos - neg)/(pos +  neg))) %>%
-    mutate(psi_cat = case_when((psi <= MOD_LOW) ~ "VERY_LOW",
-                               (MOD_LOW < psi & psi <= NORMAL) ~ "MOD_LOW",
-                               (NORMAL < psi & psi <= MOD_HIGH) ~ "NORMAL",
-                               (MOD_HIGH < psi & psi <= VERY_HIGH) ~ "MOD_HIGH",
-                               (VERY_HIGH < psi) ~ "VERY_HIGH")) %>%
-    ungroup()
-
-  n <- length(data.psi$psi)
-  
-  data.psi$psi_cat <- factor(data.psi$psi_cat, levels=c("VERY_LOW", "MOD_LOW", "NORMAL",
-                                                      "MOD_HIGH", "VERY_HIGH"))
-
-  
-  # Now create data.frame with two psi columns lagged by 1 week
-  
-  tmp <- data.frame(t0 = data.psi$psi_cat[1:n-1],
-                    t1 = data.psi$psi_cat[2:n])
-  
-  counts <- tmp %>%
-    group_by(t0, t1) %>%
-    summarize(count = n()) %>%
-    spread(t1, count, fill=0) %>%
-    ungroup()
-  
-  ncol <- dim(counts)[2]
-  total <- rowSums(counts[,2:ncol])
-  P <- counts
-  P[,2:ncol] <- counts[,2:ncol] / total
-  counts$total = total
-
-  list(P = P,
-       counts = counts)
-}
-```
-
-
 ## Commercial
 
 ### By Week
@@ -84,10 +38,7 @@ PSITransitions <- function(data, interval, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
 tmp <- sentiment.comm.all %>%
   group_by(#ProductName,
            time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
-  summarise(pos = sum(Sentiment == "POSITIVE"),
-            neg = sum(Sentiment == "NEGATIVE"),
-            stars = mean(Stars.Rating)) %>%
-  mutate(psi = ifelse(pos == 0 & neg == 0, 0, 100 * (pos - neg)/(pos +  neg)))
+  calcPSI()
 
 hist(tmp$psi)
 quantile(tmp$psi, seq(0,1,0.2))
@@ -100,11 +51,45 @@ MOD_HIGH <- 62.0
 NORMAL <- 44.0
 MOD_LOW <- 34.0
 
-res <- PSITransitions(sentiment.comm.all, "week", VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+res <- sentiment.comm.all %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>% 
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
 
 knitr::kable(res$P, row.names=TRUE, caption = "P - Commercial, Weekly")
 
 knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Weekly")
+```
+
+### Semi-Monthly
+
+```{r}
+tmp <- sentiment.comm.all %>%
+  group_by(#ProductName,
+           year = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "year"),
+           week2 = ceiling(week(as.Date(Comment.Date, format = "%m/%d/%y"))/2)) %>%
+  calcPSI()
+
+hist(tmp$psi)
+quantile(tmp$psi, seq(0,1,0.2))
+```
+
+```{r}
+# Define PSI categories
+VERY_HIGH <- 68.0
+MOD_HIGH <- 62.0
+NORMAL <- 44.0
+MOD_LOW <- 34.0
+
+res <- sentiment.comm.all %>%
+  group_by(#ProductName,
+           year = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "year"),
+           week2 = ceiling(week(as.Date(Comment.Date, format = "%m/%d/%y"))/2)) %>%
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Commercial, Semi-Monthly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Semi-Monthly")
 ```
 
 ### By Month
@@ -113,10 +98,7 @@ knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Weekly"
 tmp <- sentiment.comm.all %>%
   group_by(#ProductName,
            time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
-  summarise(pos = sum(Sentiment == "POSITIVE"),
-            neg = sum(Sentiment == "NEGATIVE"),
-            stars = mean(Stars.Rating)) %>%
-  mutate(psi = ifelse(pos == 0 & neg == 0, 0, 100 * (pos - neg)/(pos +  neg)))
+  calcPSI()
 
 hist(tmp$psi)
 quantile(tmp$psi, seq(0,1,0.2))
@@ -130,7 +112,10 @@ MOD_HIGH <- 63.0
 NORMAL <- 47.0
 MOD_LOW <- 36.0
 
-res <- PSITransitions(sentiment.comm.all, "month", VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+res <- sentiment.comm.all %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
 
 knitr::kable(res$P, row.names=TRUE, caption = "P - Commercial, Monthly")
 
@@ -150,10 +135,7 @@ knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Monthly
 tmp <- sentiment.consumer.all %>%
   group_by(#ProductName,
            time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
-  summarise(pos = sum(Sentiment == "POSITIVE"),
-            neg = sum(Sentiment == "NEGATIVE"),
-            stars = mean(Stars.Rating)) %>%
-  mutate(psi = ifelse(pos == 0 & neg == 0, 0, 100 * (pos - neg)/(pos +  neg)))
+  calcPSI()
 
 hist(tmp$psi)
 quantile(tmp$psi, seq(0,1,0.2))
@@ -166,13 +148,46 @@ MOD_HIGH <- 60.0
 NORMAL <- 45.0
 MOD_LOW <- 42.0
 
-res <- PSITransitions(sentiment.consumer.all, "week", VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+res <- sentiment.consumer.all %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
 
 knitr::kable(res$P, row.names=TRUE, caption = "P - Commercial, Monthly")
 
 knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Monthly")
 ```
 
+### Semi-Monthly
+
+```{r}
+tmp <- sentiment.consumer.all %>%
+  group_by(#ProductName,
+           year = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "year"),
+           week2 = ceiling(week(as.Date(Comment.Date, format = "%m/%d/%y"))/2)) %>%
+  calcPSI()
+
+hist(tmp$psi)
+quantile(tmp$psi, seq(0,1,0.2))
+```
+
+```{r}
+# Define PSI categories
+VERY_HIGH <- 66.0
+MOD_HIGH <- 61.0
+NORMAL <- 46.0
+MOD_LOW <- 41.0
+
+res <- sentiment.consumer.all %>%
+  group_by(#ProductName,
+           year = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "year"),
+           week2 = ceiling(week(as.Date(Comment.Date, format = "%m/%d/%y"))/2)) %>%
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Commercial, Semi-Monthly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Semi-Monthly")
+```
 
 ### By Month
 
@@ -182,10 +197,7 @@ knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Monthly
 tmp <- sentiment.consumer.all %>%
   group_by(#ProductName,
            time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
-  summarise(pos = sum(Sentiment == "POSITIVE"),
-            neg = sum(Sentiment == "NEGATIVE"),
-            stars = mean(Stars.Rating)) %>%
-  mutate(psi = ifelse(pos == 0 & neg == 0, 0, 100 * (pos - neg)/(pos +  neg)))
+  calcPSI()
 
 hist(tmp$psi)
 quantile(tmp$psi, seq(0,1,0.2))
@@ -199,7 +211,10 @@ MOD_HIGH <- 62.0
 NORMAL <- 48.0
 MOD_LOW <- 39.0
 
-res <- PSITransitions(sentiment.consumer.all, "month", VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+res <- sentiment.consumer.all %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
 
 knitr::kable(res$P, row.names=TRUE, caption = "P - Commercial, Monthly")
 
@@ -209,49 +224,11 @@ knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Monthly
 # NPS Transitions
 
 ```{r}
-NPSTransitions <- function(data, interval, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
-{
-  # browser()
-  
-  data.psi <- data %>%
-    group_by(time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = interval)) %>%
-    summarise(promoter = sum(NPS >= 9),
-            detractor = sum(NPS <= 6),
-            total = n()) %>%
-    mutate(nps = ifelse(total = 0, 0, 100 * (promoter - detractor) / total)) %>%
-    mutate(psi_cat = case_when((nps <= MOD_LOW) ~ "VERY_LOW",
-                               (MOD_LOW < nps & nps <= NORMAL) ~ "MOD_LOW",
-                               (NORMAL < nps & nps <= MOD_HIGH) ~ "NORMAL",
-                               (MOD_HIGH < nps & nps <= VERY_HIGH) ~ "MOD_HIGH",
-                               (VERY_HIGH < nps) ~ "VERY_HIGH")) %>%
-    ungroup()
-
-  n <- length(data.nps$nps)
-  
-  data.nps$nps_cat <- factor(data.nps$nps_cat, levels=c("VERY_LOW", "MOD_LOW", "NORMAL",
-                                                      "MOD_HIGH", "VERY_HIGH"))
-
-  
-  # Now create data.frame with two nps columns lagged by 1 week
-  
-  tmp <- data.frame(t0 = data.nps$nps_cat[1:n-1],
-                    t1 = data.nps$nps_cat[2:n])
-  
-  counts <- tmp %>%
-    group_by(t0, t1) %>%
-    summarize(count = n()) %>%
-    spread(t1, count, fill=0) %>%
-    ungroup()
-  
-  ncol <- dim(counts)[2]
-  total <- rowSums(counts[,2:ncol])
-  P <- counts
-  P[,2:ncol] <- counts[,2:ncol] / total
-  counts$total = total
-
-  list(P = P,
-       counts = counts)
-}
+# Define NPS categories
+VERY_HIGH <- 60.0
+MOD_HIGH <- 45.0
+NORMAL <- 35.0
+MOD_LOW <- 8.0
 ```
 
 ## Commercial
@@ -262,26 +239,56 @@ NPSTransitions <- function(data, interval, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
 
 tmp <- survey.comm.all %>%
    group_by(time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "week")) %>%
-   summarise(promoter = sum(NPS >= 9),
-            detractor = sum(NPS <= 6),
-            total = n()) %>%
-   mutate(nps = ifelse(total == 0, 0, 100 * (promoter - detractor) / total))
+   calcNPS()
 
 hist(tmp$nps)
 quantile(tmp$nps, seq(0,1,0.2))
 ```
 ```{r}
 # Define NPS categories
-VERY_HIGH <- 46.0
-MOD_HIGH <- 37.0
-NORMAL <- 34.0
-MOD_LOW <- 30.0
+# VERY_HIGH <- 46.0
+# MOD_HIGH <- 37.0
+# NORMAL <- 34.0
+# MOD_LOW <- 30.0
 
-res <- PSITransitions(sentiment.comm.all, "week", VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+res <- survey.comm.all %>%
+   group_by(time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "week")) %>%
+   NPSTransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
 
 knitr::kable(res$P, row.names=TRUE, caption = "P - Commercial, Weekly")
 
 knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Weekly")
+```
+
+### Semi-Monthly
+
+```{r}
+tmp <- survey.comm.all %>%
+  group_by(#ProductName,
+           year = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "year"),
+           week2 = ceiling(week(as.Date(Date.Survey, format = "%m/%d/%Y"))/2)) %>%
+  calcNPS()
+
+hist(tmp$nps)
+quantile(tmp$nps, seq(0,1,0.2))
+```
+
+```{r}
+# Define NPS categories
+# VERY_HIGH <- 43.0
+# MOD_HIGH <- 38.0
+# NORMAL <- 36.0
+# MOD_LOW <- 31.0
+
+res <- survey.comm.all %>%
+  group_by(#ProductName,
+           year = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "year"),
+           week2 = ceiling(week(as.Date(Date.Survey, format = "%m/%d/%Y"))/2)) %>%
+  NPSTransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Commercial, Semi-Monthly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Semi-Monthly")
 ```
 
 ### By Month
@@ -290,10 +297,7 @@ knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Weekly"
 
 tmp <- survey.comm.all %>%
    group_by(time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
-   summarise(promoter = sum(NPS >= 9),
-            detractor = sum(NPS <= 6),
-            total = n()) %>%
-   mutate(nps = ifelse(total == 0, 0, 100 * (promoter - detractor) / total))
+   calcNPS()
 
 hist(tmp$nps)
 quantile(tmp$nps, seq(0,1,0.2))
@@ -301,12 +305,14 @@ quantile(tmp$nps, seq(0,1,0.2))
 
 ```{r}
 # Define NPS categories
-VERY_HIGH <- 46.0
-MOD_HIGH <- 37.0
-NORMAL <- 34.0
-MOD_LOW <- 30.0
+# VERY_HIGH <- 45.0
+# MOD_HIGH <- 38.0
+# NORMAL <- 35.0
+# MOD_LOW <- 32.0
 
-res <- PSITransitions(sentiment.comm.all, "month", VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+res <- survey.comm.all %>%
+   group_by(time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+   NPSTransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
 
 knitr::kable(res$P, row.names=TRUE, caption = "P - Commercial, Weekly")
 
@@ -321,10 +327,7 @@ knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Weekly"
 
 tmp <- survey.consumer.all %>%
    group_by(time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "week")) %>%
-   summarise(promoter = sum(NPS >= 9),
-            detractor = sum(NPS <= 6),
-            total = n()) %>%
-   mutate(nps = ifelse(total == 0, 0, 100 * (promoter - detractor) / total))
+   calcNPS()
 
 hist(tmp$nps)
 quantile(tmp$nps, seq(0,1,0.2))
@@ -332,15 +335,185 @@ quantile(tmp$nps, seq(0,1,0.2))
 
 ```{r}
 # Define NPS categories
-VERY_HIGH <- 41.0
-MOD_HIGH <- 36.0
-NORMAL <- 30.0
-MOD_LOW <- 25.0
+# VERY_HIGH <- 41.0
+# MOD_HIGH <- 36.0
+# NORMAL <- 30.0
+# MOD_LOW <- 25.0
 
-res <- PSITransitions(sentiment.comm.all, "week", VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+res <- survey.consumer.all %>%
+   group_by(time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "week")) %>%
+   NPSTransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Consumer, Weekly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Consumer, Weekly")
+```
+
+### Semi-Monthly
+
+```{r}
+tmp <- survey.consumer.all %>%
+  group_by(#ProductName,
+           year = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "year"),
+           week2 = ceiling(week(as.Date(Date.Survey, format = "%m/%d/%Y"))/2)) %>%
+  calcNPS()
+
+hist(tmp$nps)
+quantile(tmp$nps, seq(0,1,0.2))
+```
+
+```{r}
+# Define NPS categories
+# VERY_HIGH <- 42.0
+# MOD_HIGH <- 33.0
+# NORMAL <- 30.0
+# MOD_LOW <- 26.0
+
+res <- survey.consumer.all %>%
+  group_by(#ProductName,
+           year = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "year"),
+           week2 = ceiling(week(as.Date(Date.Survey, format = "%m/%d/%Y"))/2)) %>%
+  NPSTransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Consumer, Semi-Monthly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Consumer, Semi-Monthly")
+```
+
+### Monthly 
+
+```{r}
+
+tmp <- survey.consumer.all %>%
+   group_by(time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+   calcNPS()
+
+hist(tmp$nps)
+quantile(tmp$nps, seq(0,1,0.2))
+```
+
+```{r}
+# # Define NPS categories
+# VERY_HIGH <- 41.0
+# MOD_HIGH <- 30.0
+# NORMAL <- 29.0
+# MOD_LOW <- 25.0
+
+res <- survey.consumer.all %>%
+   group_by(time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+   NPSTransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Consumer, Monthly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Consumer, Monthly")
+```
+
+# Exam 2 Positive/Negative Sentiment only
+
+## Commercial
+
+```{r}
+# Define PSI categories
+VERY_HIGH <- 100.0
+MOD_HIGH <- 100.0
+NORMAL <- 100.0
+MOD_LOW <- 0.0
+
+res <- sentiment.comm.all %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>% 
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
 
 knitr::kable(res$P, row.names=TRUE, caption = "P - Commercial, Weekly")
 
 knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Weekly")
 ```
 
+```{r}
+# Define PSI categories
+VERY_HIGH <- 100.0
+MOD_HIGH <- 100.0
+NORMAL <- 100.0
+MOD_LOW <- 0.0
+
+res <- sentiment.comm.all %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>% 
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Commercial, Monthly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Monthly")
+```
+
+## Consumer
+
+```{r}
+# Define PSI categories
+VERY_HIGH <- 100.0
+MOD_HIGH <- 100.0
+NORMAL <- 100.0
+MOD_LOW <- 0.0
+
+res <- sentiment.consumer.all %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>% 
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Consumer, Weekly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Consumer, Weekly")
+```
+
+```{r}
+# Define PSI categories
+VERY_HIGH <- 100.0
+MOD_HIGH <- 100.0
+NORMAL <- 100.0
+MOD_LOW <- 0.0
+
+res <- sentiment.consumer.all %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>% 
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Consumer, Monthly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Consumer, Monthly")
+```
+
+## Example grouping by series
+
+```{r}
+# Define PSI categories
+VERY_HIGH <- 100.0
+MOD_HIGH <- 100.0
+NORMAL <- 100.0
+MOD_LOW <- 0.0
+
+res <- sentiment.consumer.all %>%
+  group_by(SeriesName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>% 
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Consumer, Monthly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Consumer, Monthly")
+```
+
+```{r}
+# Define PSI categories
+VERY_HIGH <- 100.0
+MOD_HIGH <- 100.0
+NORMAL <- 100.0
+MOD_LOW <- 0.0
+
+res <- survey.consumer.all %>%
+  group_by(SeriesName,
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>% 
+  NPSTransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Consumer, Monthly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Consumer, Monthly")
+```
