@@ -111,7 +111,7 @@ NPSTransitions <- function(df, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
                                                         "MOD_HIGH", "VERY_HIGH"))
   
   
-  counts <- data.psi %>%
+  counts <- data.nps %>%
     ungroup() %>%
     group_by(nps_cat, next_nps_cat) %>%
     filter(!is.na(nps_cat) & !is.na(next_nps_cat)) %>%
