@@ -481,3 +481,39 @@ knitr::kable(res$P, row.names=TRUE, caption = "P - Consumer, Monthly")
 
 knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Consumer, Monthly")
 ```
+
+## Example grouping by series
+
+```{r}
+# Define PSI categories
+VERY_HIGH <- 100.0
+MOD_HIGH <- 100.0
+NORMAL <- 100.0
+MOD_LOW <- 0.0
+
+res <- sentiment.consumer.all %>%
+  group_by(SeriesName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>% 
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Consumer, Monthly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Consumer, Monthly")
+```
+
+```{r}
+# Define PSI categories
+VERY_HIGH <- 100.0
+MOD_HIGH <- 100.0
+NORMAL <- 100.0
+MOD_LOW <- 0.0
+
+res <- survey.consumer.all %>%
+  group_by(SeriesName,
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>% 
+  NPSTransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Consumer, Monthly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Consumer, Monthly")
+```

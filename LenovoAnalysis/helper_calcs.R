@@ -60,23 +60,17 @@ PSITransitions <- function(df, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
                                (NORMAL < psi & psi <= MOD_HIGH) ~ "NORMAL",
                                (MOD_HIGH < psi & psi <= VERY_HIGH) ~ "MOD_HIGH",
                                (VERY_HIGH < psi) ~ "VERY_HIGH")) %>%
-    ungroup()
-  
-  n <- length(data.psi$psi)
+    mutate(next_psi_cat = lead(psi_cat, 1))
   
   data.psi$psi_cat <- factor(data.psi$psi_cat, levels=c("VERY_LOW", "MOD_LOW", "NORMAL",
                                                         "MOD_HIGH", "VERY_HIGH"))
   
-  
-  # Now create data.frame with two psi columns lagged by 1 week
-  
-  tmp <- data.frame(t0 = data.psi$psi_cat[1:n-1],
-                    t1 = data.psi$psi_cat[2:n])
-  
-  counts <- tmp %>%
-    group_by(t0, t1) %>%
+  counts <- data.psi %>%
+    ungroup() %>%
+    group_by(psi_cat, next_psi_cat) %>%
+    filter(!is.na(psi_cat) & !is.na(next_psi_cat)) %>%
     summarize(count = n()) %>%
-    spread(t1, count, fill=0) %>%
+    spread(next_psi_cat, count, fill=0) %>%
     ungroup()
   
   ncol <- dim(counts)[2]
@@ -109,7 +103,7 @@ NPSTransitions <- function(df, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
                                (NORMAL < nps & nps <= MOD_HIGH) ~ "NORMAL",
                                (MOD_HIGH < nps & nps <= VERY_HIGH) ~ "MOD_HIGH",
                                (VERY_HIGH < nps) ~ "VERY_HIGH")) %>%
-    ungroup()
+    mutate(next_nps_cat = lead(nps_cat, 1))
   
   n <- length(data.nps$nps)
   
@@ -117,15 +111,12 @@ NPSTransitions <- function(df, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
                                                         "MOD_HIGH", "VERY_HIGH"))
   
   
-  # Now create data.frame with two nps columns lagged by 1 week
-  
-  tmp <- data.frame(t0 = data.nps$nps_cat[1:n-1],
-                    t1 = data.nps$nps_cat[2:n])
-  
-  counts <- tmp %>%
-    group_by(t0, t1) %>%
+  counts <- data.psi %>%
+    ungroup() %>%
+    group_by(nps_cat, next_nps_cat) %>%
+    filter(!is.na(nps_cat) & !is.na(next_nps_cat)) %>%
     summarize(count = n()) %>%
-    spread(t1, count, fill=0) %>%
+    spread(next_nps_cat, count, fill=0) %>%
     ungroup()
   
   ncol <- dim(counts)[2]
