@@ -407,3 +407,77 @@ knitr::kable(res$P, row.names=TRUE, caption = "P - Consumer, Monthly")
 
 knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Consumer, Monthly")
 ```
+
+# Exam 2 Positive/Negative Sentiment only
+
+## Commercial
+
+```{r}
+# Define PSI categories
+VERY_HIGH <- 100.0
+MOD_HIGH <- 100.0
+NORMAL <- 100.0
+MOD_LOW <- 0.0
+
+res <- sentiment.comm.all %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>% 
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Commercial, Weekly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Weekly")
+```
+
+```{r}
+# Define PSI categories
+VERY_HIGH <- 100.0
+MOD_HIGH <- 100.0
+NORMAL <- 100.0
+MOD_LOW <- 0.0
+
+res <- sentiment.comm.all %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>% 
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Commercial, Monthly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Commercial, Monthly")
+```
+
+## Consumer
+
+```{r}
+# Define PSI categories
+VERY_HIGH <- 100.0
+MOD_HIGH <- 100.0
+NORMAL <- 100.0
+MOD_LOW <- 0.0
+
+res <- sentiment.consumer.all %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>% 
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Consumer, Weekly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Consumer, Weekly")
+```
+
+```{r}
+# Define PSI categories
+VERY_HIGH <- 100.0
+MOD_HIGH <- 100.0
+NORMAL <- 100.0
+MOD_LOW <- 0.0
+
+res <- sentiment.consumer.all %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>% 
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Consumer, Monthly")
+
+knitr::kable(res$counts, row.names=TRUE, caption = "Counts - Consumer, Monthly")
+```
