@@ -31,19 +31,6 @@ load("../CleanData/filtered_product_lists.Rdata")
 ```
 
 
-```{r}
-# Look at scatterplots fitted vs actual for test data set
-
-cbind(all.test, 
-      pred=predict(mdl1, data.frame(SeriesName = all.test$SeriesName, psi=all.test$psi))) %>%
-ggplot(aes(x=psi, y=nps, group=SeriesName)) +
-  geom_point(alpha=0.3) +
-  geom_smooth(method="lm", se=FALSE) +
-  geom_point(aes(y=pred), alpha=0.3, color="red") +
-  facet_wrap(~SeriesName)
-```
-
-
 # K-Fold Cross Validation using caret
 
 ## Consumer
@@ -126,7 +113,7 @@ ggplot(aes(x=psi, y=nps, group=SeriesName)) +
   facet_wrap(~SeriesName)
 ```
 
-Consumer Linear Model: $NPS ~ Series + PSI + Stars$
+Consumer Linear Model: $NPS \sim Series + PSI + Stars$
 
 ## Commercial
 
@@ -210,4 +197,4 @@ ggplot(aes(x=psi, y=nps, group=SeriesName)) +
   facet_wrap(~SeriesName)
 ```
 
-Commercial Linear Model: $NPS ~ Series + PSI + Series:PSI$
+Commercial Linear Model: $NPS \sim Series + PSI + Series:PSI$
