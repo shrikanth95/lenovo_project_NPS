@@ -1,0 +1,61 @@
+---
+title: "MDP"
+author: "Melissa Wong"
+date: "November 21, 2019"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+library(tidyverse)
+library(MDPtoolbox)
+
+#source("../src_lenovo_project.R")
+source("data_prep.R")
+source("get_stationary_distribution.R")
+```
+
+```{r}
+# States: Age class of trees; 0 to 20 yrs = 1, 21 to 40 yrs = 2, > 40 years = 3
+# Actions: Wait = 1, Cut = 2
+# p = 0.1 is probability of wildfire
+
+# Transitions
+P1 <- matrix(c(0.1, 0.9, 0, 0.1, 0, 0.9, 0.1, 0, 0.9), nrow=3, byrow=TRUE)
+P2 <- matrix(c(1, 0, 0, 1, 0, 0, 1, 0, 0), nrow=3, byrow=TRUE)
+P <- array(c(P1, P2), dim=c(3,3,2))
+
+# Rewards
+R1 <- matrix(c(0,0,4), nrow=3)
+R2 <- matrix(c(0,1,2), nrow=3)
+R <- array(c(R1, R2), dim=c(3,2))
+
+# Check validity
+mdp_check(P, R)
+
+
+# Discount factor
+discount <- 0.95 
+```
+
+```{r}
+# Objective is to maximize rewards
+#Policy Iteration
+mdp_policy_iteration(P, R, discount)
+```
+
+```{r}
+# Objective is to maximize rewards
+# Linear Programming
+mdp_LP(P, R, discount)
+```
+
+```{r}
+# Stationary Distributions
+get_stationary_distribution(P1)
+
+get_stationary_distribution(P2)
+```
+
