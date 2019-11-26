@@ -56,6 +56,16 @@ library(lubridate)
 library(grid)
 library(gridExtra)
 ```
+Introduction
+The overall question was how useful of a model could we make for Lenovo. We wanted the model to predict a specific score that could be compared to the industry. We then wanted this comparison to help Lenovo decide what action needed to be taken. The biggest problem we faced was how a prediction of NPS score can be made if we were only given reviews that were categorized as positive or negative, in addition to a star rating on a one to five scale. Our objective was to build the most accurate model we could to determine product NPS based off the sentiment rating (positive or negative) and star rating of a product. We determined if the product families should each be given a separate model, analyzed how the NPS scores were affected by the business group reviewing them, and determined how to make telemetry data useful despite there only being thirty days’ worth of data. We also determined if the product stars would change our predictions and how to account for any variation in our model. Lastly, we identified and constructed the type of model that would be most useful given the datasets we received. 
+Our team used the current data to build a model that can predict the product NPS scores by using sentiment and star data. The team developed NPS states based on the industry standards and Sentiment states based on which quintile they fell in within the range of PSI scores. In order to make the model as precise as possible, we recommend analyzing the data on a weekly basis as we did when we developed our model. The team has decided to consider telemetry data when developing a model since we identified strong correlations between telemetry categories and PSI scores.
+Concerns**
+
+Methodology
+Our recommendation is to build a linear regression model and create NPS states for the Markov decision process based on the three data sets. The predicted NPS score will be used in the Markov Decision Process which will allow Lenovo to see how an NPS score is expected to change over time.  
+Linear Regression Model In Detail***
+MDP In Detail***
+
 
 \clearpage
 \appendix

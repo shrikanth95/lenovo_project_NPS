@@ -5,32 +5,179 @@ date: "November 21, 2019"
 output: pdf_document
 ---
 
-
 ```{r setup, include=FALSE}
 rm(list = ls())
+
+knitr::opts_chunk$set(echo = FALSE)
 
 library(tidyverse)
 library(MDPtoolbox)
 
-#source("../src_lenovo_project.R")
 source("data_prep.R")
+source("helper_calcs.R")
 source("get_stationary_distribution.R")
+
+filter_raw_data()
+
+load("../CleanData/filtered_sentiment_data.Rdata")
+load("../CleanData/filtered_product_lists.Rdata")
+load("../CleanData/filtered_survey_data.Rdata")
+```
+
+# NPS
+
+## States 
+
+\begin{itemize}
+  \item Very High: $NPS > 60.0$
+  \item Moderately High: $60.0 \ge NPS > 45.0$
+  \item Normal: $45.0 \ge NPS > 35.0$
+  \item Moderately Low: $35.0 \ge NPS > 8.0$
+  \item Very Low: $8.0 \ge NPS$
+\end{itemize}
+
+
+## Actions
+
+\begin{table}[h!]
+\begin{tabular}{lc|c|c|c|c|c|}
+\cline{3-7}
+\multicolumn{1}{c}{}     &                & \multicolumn{5}{c|}{Applicable NPS States}                                                                                                            \\ \hline
+\multicolumn{1}{|c|}{ID} & Action         & Very Low & \begin{tabular}[c]{@{}c@{}}Moderately\\ Low\end{tabular} & Normal & \begin{tabular}[c]{@{}c@{}}Moderately \\ High\end{tabular} & Very High \\ \hline
+\multicolumn{1}{|l|}{1}  & Do Nothing     & Y        & Y                                                        & Y      & Y                                                          & Y         \\ \hline
+\multicolumn{1}{|l|}{2}  & Software Patch & Y        & Y                                                        & Y      & Y                                                          & Y         \\ \hline
+\multicolumn{1}{|l|}{3}  & TBD            & Y        & Y                                                        & Y      & Y                                                          & Y         \\ \hline
+\end{tabular}
+\end{table}
+
+## Transition Matrices
+
+### Action: Do Nothing
+```{r warning=FALSE}
+# Define NPS states
+NPS_VERY_HIGH <- 60.0
+NPS_MOD_HIGH <- 45.0
+NPS_NORMAL <- 35.0
+NPS_MOD_LOW <- 8.0
+
+res <- survey.consumer.all %>%
+  group_by(SeriesName,
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>% 
+  NPSTransitions(NPS_VERY_HIGH, NPS_MOD_HIGH, NPS_NORMAL, NPS_MOD_LOW)
+
+PConsumer_A1 <- res$P
+
+knitr::kable(PConsumer_A1, row.names=TRUE, caption = "Consumer, Do Nothing")
+
+```
+
+
+```{r warning=FALSE}
+# Define NPS states
+NPS_VERY_HIGH <- 60.0
+NPS_MOD_HIGH <- 45.0
+NPS_NORMAL <- 35.0
+NPS_MOD_LOW <- 8.0
+
+res <- survey.comm.all %>%
+  group_by(SeriesName,
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>% 
+  NPSTransitions(NPS_VERY_HIGH, NPS_MOD_HIGH, NPS_NORMAL, NPS_MOD_LOW)
+
+PComm_A1 <- res$P
+
+knitr::kable(PComm_A1, row.names=TRUE, caption = "Commercial, Do Nothing")
+
+```
+
+### Action: Software Patch
+
+Assume that a software patch reduces the probability of transitioning to Very_Low by $p\%$ as compared to Do Nothing, and that percentage is evenly distributed among the remaining 4 states.  Set $p=10\%$ for illustration.
+
+```{r}
+p <- 0.1
+n <- nrow(PConsumer_A1)
+delta <- p * PConsumer_A1$VERY_LOW
+
+PConsumer_A2 <- PConsumer_A1
+PConsumer_A2$VERY_LOW <- PConsumer_A2$VERY_LOW - delta
+PConsumer_A2$MOD_LOW <- PConsumer_A2$MOD_LOW + delta/(n-1)
+PConsumer_A2$NORMAL <- PConsumer_A2$NORMAL + delta/(n-1)
+PConsumer_A2$MOD_HIGH <- PConsumer_A2$MOD_HIGH + delta/(n-1)
+PConsumer_A2$VERY_HIGH <- PConsumer_A2$VERY_HIGH + delta/(n-1)
+
+knitr::kable(PConsumer_A2, row.names=TRUE, caption = "Consumer, Software Patch")
+
 ```
 
 ```{r}
-# States: Age class of trees; 0 to 20 yrs = 1, 21 to 40 yrs = 2, > 40 years = 3
-# Actions: Wait = 1, Cut = 2
-# p = 0.1 is probability of wildfire
+p <- 0.1
+n <- nrow(PComm_A1)
+delta <- p * PComm_A1$VERY_LOW
+
+PComm_A2 <- PComm_A1
+PComm_A2$VERY_LOW <- PComm_A2$VERY_LOW - delta
+PComm_A2$MOD_LOW <- PComm_A2$MOD_LOW + delta/(n-1)
+PComm_A2$NORMAL <- PComm_A2$NORMAL + delta/(n-1)
+PComm_A2$MOD_HIGH <- PComm_A2$MOD_HIGH + delta/(n-1)
+PComm_A2$VERY_HIGH <- PComm_A2$VERY_HIGH + delta/(n-1)
+
+knitr::kable(PComm_A2, row.names=TRUE, caption = "Commercial, Software Patch")
+
+```
+
+## Rewards
+
+Assume Rewards are the same for commercial and consumer segments and assume reward matrix is of the form shown below with a parameter $r$.
+
+\begin{table}[h!]
+\begin{tabular}{l|c|c|c|c|c|}
+\cline{2-6}
+\multicolumn{1}{c|}{}                                                           & Very Low & \begin{tabular}[c]{@{}c@{}}Moderately\\ Low\end{tabular} & Normal & \begin{tabular}[c]{@{}c@{}}Moderately \\ High\end{tabular} & Very High \\ \hline
+\multicolumn{1}{|l|}{Very Low}                                                  & -2r      & -r                                                       & 0      & r                                                          & 2r        \\ \hline
+\multicolumn{1}{|l|}{\begin{tabular}[c]{@{}l@{}}Moderately\\ Low\end{tabular}}  & -2r      & -r                                                       & 0      & r                                                          & 2r        \\ \hline
+\multicolumn{1}{|l|}{Normal}                                                    & -2r      & -r                                                       & 0      & r                                                          & 2r        \\ \hline
+\multicolumn{1}{|c|}{\begin{tabular}[c]{@{}c@{}}Moderately\\ High\end{tabular}} & -2r      & -r                                                       & 0      & r                                                          & 2r        \\ \hline
+\multicolumn{1}{|c|}{Very High}                                                 & -2r      & -r                                                       & 0      & r                                                          & 2r        \\ \hline
+\end{tabular}
+\end{table}
+
+Set $r=10$ for illustration purposes.
+
+### Action: Do Nothing
+
+```{r}
+val <- 10
+R_A1 <- matrix(rep(c(-2*val, -1*val, 0, val, 2*val),n),
+               nrow=n,
+               byrow=TRUE)
+
+knitr::kable(R_A1, caption = "Rewards, Do Nothing")
+```
+
+### Action: Software Patch
+
+Assume there is a cost, $c$, with deploying a software patch.  Set $c = 5$ for illustration purposes.
+
+```{r}
+c <- 5
+R_A2 <- R_A1 - c
+
+knitr::kable(R_A2, caption = "Rewards, Software Patch")
+```
+
+
+## MDP Consumer
+
+```{r}
 
 # Transitions
-P1 <- matrix(c(0.1, 0.9, 0, 0.1, 0, 0.9, 0.1, 0, 0.9), nrow=3, byrow=TRUE)
-P2 <- matrix(c(1, 0, 0, 1, 0, 0, 1, 0, 0), nrow=3, byrow=TRUE)
-P <- array(c(P1, P2), dim=c(3,3,2))
+P1 <- as.matrix(PConsumer_A1[2:6])
+P2 <- as.matrix(PConsumer_A2[2:6])
+P <- array(c(P1, P2), dim=c(dim(P1), 2))
 
 # Rewards
-R1 <- matrix(c(0,0,4), nrow=3)
-R2 <- matrix(c(0,1,2), nrow=3)
-R <- array(c(R1, R2), dim=c(3,2))
+R <- array(c(R_A1, R_A2), dim=c(dim(P1), 2))
 
 # Check validity
 mdp_check(P, R)
@@ -59,3 +206,43 @@ get_stationary_distribution(P1)
 get_stationary_distribution(P2)
 ```
 
+## MDP Commercial
+
+```{r}
+
+# Transitions
+P1 <- as.matrix(PComm_A1[2:6])
+P2 <- as.matrix(PComm_A2[2:6])
+P <- array(c(P1, P2), dim=c(dim(P1), 2))
+
+# Rewards
+R <- array(c(R_A1, R_A2), dim=c(dim(P1), 2))
+
+# Check validity
+mdp_check(P, R)
+
+
+# Discount factor
+discount <- 0.95 
+```
+
+
+```{r}
+# Objective is to maximize rewards
+#Policy Iteration
+mdp_policy_iteration(P, R, discount)
+```
+
+```{r}
+# Objective is to maximize rewards
+# Linear Programming
+mdp_LP(P, R, discount)
+```
+
+
+```{r}
+# Stationary Distributions
+get_stationary_distribution(P1)
+
+get_stationary_distribution(P2)
+```
