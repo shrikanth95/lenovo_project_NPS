@@ -1,0 +1,320 @@
+---
+title: "MDP with Telemetry"
+author: "Shrikanth Yadav"
+date: "November 25, 2019"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+# rm(list = ls())
+
+library(tidyverse)
+library(MDPtoolbox)
+source("data_prep.R")
+source("helper_calcs.R")
+source("MDP_lenovo_helper.R")
+
+filter_raw_data()
+
+load("../CleanData/filtered_sentiment_data.Rdata")
+load("../CleanData/filtered_product_lists.Rdata")
+load("../CleanData/filtered_survey_data.Rdata")
+
+#source("../src_lenovo_project.R")
+```
+
+
+# Problem Formulation: Evolution Tracking
+
+## States
+
+Our state matrix would be a combination of the telemetry and sentiment transition matrices.  Our final state would be $\{(++,N), (+,N),(0,N),(-,N),(--,N),(++,AN), (+,AN),(0,AN),(-,AN),(--,AN)\}$.  The states and ranges are described below:
+
+### Sentiment states 
+
+We consider PSI values (Five states $S_S \in \{++,+, 0, -, --\}$) and is referred to as $P_{S}$.
+
+  - ++: PSI above the 80\% quantile (Above 65)
+  - +: PSI between 80 and 60\% quantile (between 60 and 65)
+  - 0: PSI between 40 and 60\% quantile (between 45 and 60)
+  - -: PSI between 20 and 40\% quantile (between 42 and 45)
+  - --: PSI below 20\% quantile (below 42)
+
+```{r}
+n.sent = 5 
+tmp <- sentiment.consumer.all %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
+  calcPSI()
+# Define PSI categories
+VERY_HIGH <- 65.0
+MOD_HIGH <- 60.0
+NORMAL <- 45.0
+MOD_LOW <- 42.0
+
+res <- sentiment.consumer.all %>%
+  group_by(#ProductName,
+           time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
+  PSITransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+knitr::kable(res$P, row.names=TRUE, caption = "P - Consumer, Weekly")
+tmp = as.matrix(res$P,ncol = 5,nrow = 5)
+p.s = matrix(as.numeric(tmp[1:5,2:6]),ncol = 5, nrow= 5)
+rownames(p.s) = colnames(tmp)[2:6]
+colnames(p.s) = colnames(tmp)[2:6]
+
+```
+
+
+### Telemetry
+
+Assuming we have a time-series of telemetry data, states can be defined between normal operation $N$ and abnormal operation $AN$.  The no-action transition matrix can be constructed from defining thresholds in the hours of battery life and in the crash rate related to specific driver updates (Two states $S_T\in \{N, AN\}$) and is referred to as $P_{T}$.
+
+An example of how the telemetry is used is as follows.
+```{r, echo=TRUE}
+telemetry.con <- read.csv("../RawData/Driver_Health_consumer_ideapad.csv", header = TRUE)
+
+telemetry.comm <- read.csv("../RawData/Driver_Health_consumer_ideapad.csv", header = TRUE)
+
+telemetry.con <- telemetry.con %>% mutate(Driver.Name = as.character(Driver.Name),
+                                          Crashes = as.numeric(Crashes), 
+                                          Percent.Impacted = as.numeric(sub("%", "",Percent.Impacted)),
+                                          Total.Machines = as.numeric(Total.Machines)) %>%
+  mutate(Percent.crash = Crashes/Total.Machines*100)
+
+q.1 <- quantile(telemetry.con$Percent.crash[telemetry.con$Driver.Name == 'atikmpag.sys'], probs = c(0.25, 0.5, 0.75))
+# quantile(telemetry.con$Percent.Impacted[telemetry.con$Driver.Name == 'atikmpag.sys'], probs = c(0.25, 0.5, 0.75))
+knitr::kable(q.1, caption = "For the crash-rate percentage, 0.25, 0.5 and 0.75 Quantiles of the atikmpag.sys driver are as follows.")
+```
+
+Assuming driver updates are released because of a high crash-rate, we calculate the percent crash-rate from 
+
+$$c_{t} =  \frac{\text{Number Crashes for a specifc driver}}{\text{Number Machines associted with the driver}}$$.
+
+We then define a threshold 50\% quantile level $\gamma$ above which the epoch is labelled as Abnormal operation.
+
+```{r}
+n.tel = 2
+p.tel = matrix(c(0.75, 0.25, 0.25, 0.75),nrow = 2, ncol = 2, byrow = TRUE)
+rownames(p.tel) <- c("N","AN")
+colnames(p.tel) <- c("N","AN")
+knitr::kable(p.tel ,  caption = "A possible telemetry transtion matrix from ",  row.names = TRUE)
+
+```
+
+
+The final state matrix $P$ would be a combination of $P_S$ and $P_T$ given by
+
+
+$$P_{1}(s,t->s_1,t_1) = P_S(s)P_S(s_1)P_T(t)P_T(t_1)$$
+
+
+## Actions
+
+The actions are chosen between performing an intervention and doing nothing.  
+
+- A shift towards normal operating mode is expected in the telemetry state transition matrix associated with the intervention.  The transition matrix is denoted as $P_{T,1}$.  As the telemetry is not provided, we assume that the transition probabilities corresponding to positive and negative sentiment will increase and decrease respectively by a predefined factor $\gamma_T$.
+
+- A relatively small shift is expected in the sentiment transition matrix as the population is relatively late to react to improvements.  This is referred to as $P_{S,1}$.The new sentiment transition matrix can be estimated similarly by choosing the fraction by which probabilities will change.  This is denoted by $\gamma_S$. Note that $\gamma_S<\gamma_T$.  
+
+
+The joint transition matrix $P_1$ is associated with the combination of $P_{S,1}$ and $P_{T,1}$.
+
+```{r}
+p.t = p.tel
+p.s = p.s
+
+p.s
+matrix(rep(p.s[,1],n.tel*n.sent), ncol = n.tel*n.sent, nrow = n.tel*n.sent, byrow = FALSE)
+
+# Calcualtion of join probability matrix
+combine.telemetry.sentiment(number.sentiment.states = n.sent,number.telemetry.states = n.tel,sentiment.probability.matix = p.s, telemetry.probability.matix = p.t)
+```
+
+
+## Rewards
+A cost $r_k$ is incurred when an intervention $k\in\{1,2\}$ is performed.  The no-action cost matrix that incentivize transitions towards higher sentiment scores are denoted by $R_{T,S,1}$.
+
+```{r}
+R.st1 = matrix(c(100, 75, 50, -25, -50, -100, 
+             100, 70, 45, -30, -55, -100,
+             100, 65, 40, -35, -60, -100,
+             100, 70, 45, -40, -65, -100,
+             100, 65, 40, -35, -70, -100,
+             100, 60, 35, -45, -80, -100),nrow = 6, ncol = 6,byrow = TRUE)
+rownames(R.st1) <- c("+,N","0,N","-,N","+,AN","0,AN","-,AN")
+colnames(R.st1) <- c("+,N","0,N","-,N","+,AN","0,AN","-,AN")
+knitr::kable(R.st1 ,  caption = "A suggested no-action reward function",  row.names = TRUE)
+```
+
+The reward matrix $R_{S,T,2}$ associated with an intervention should be calculated based on $P_{1}$ as $$R_{S,T,2}(s,t->s_1,t_1) = -r_2+\sum_{x}\left(R_{S,T,1}(s,t->x)\right) P_1(s,t->x)$$ where $x\in\{(+,N),(0,N),(-,N),(+,AN),(0,AN),(-,AN)\}$
+<!-- \begin{equation} -->
+<!-- \end{equation} -->
+\clearpage
+# Forest Example
+
+
+
+
+
+
+```{r}
+# States: Age class of trees; 0 to 20 yrs = 1, 21 to 40 yrs = 2, > 40 years = 3
+# Actions: Wait = 1, Cut = 2
+# p = 0.1 is probability of wildfire
+
+# Transitions
+P1 <- matrix(c(0.1, 0.9, 0, 0.1, 0, 0.9, 0.1, 0, 0.9), nrow=3, byrow=TRUE)
+P2 <- matrix(c(1, 0, 0, 1, 0, 0, 1, 0, 0), nrow=3, byrow=TRUE)
+P <- array(c(P1, P2), dim=c(3,3,2))
+
+# Rewards
+R1 <- matrix(c(0,0,4), nrow=3)
+R2 <- matrix(c(0,1,2), nrow=3)
+R <- array(c(R1, R2), dim=c(3,2))
+
+# Check validity
+mdp_check(P, R)
+
+# Discount factor
+discount <- 0.95 
+```
+
+```{r}
+# Objective is to maximize rewards
+#Policy Iteration
+mdp_policy_iteration(P, R, discount)
+```
+
+```{r}
+# Objective is to maximize rewards
+# Linear Programming
+mdp_LP(P, R, discount)
+```
+
+```{r}
+# Stationary Distributions
+get_stationary_distribution(P1)
+
+get_stationary_distribution(P2)
+```
+
+
+
+From the consumer telemetry data (Ideapad) of driver health, the 50 percentile of the percentage of devices impacted is found to be 0.32\%.  For the initial run, we define two discrete states above and below the 50 percentile mark denoted by $M$ and $S$ indicating minor impact and severe impact respectively.  
+
+
+```{r}
+# Initial parameters
+beta = 1.1
+N = 4 # Number of states
+K = 2 # Number of actions
+```
+
+
+As the data is skewed above zero, 50 is chosen as a threshold.  We define the following probability matrices
+
+```{r}
+# p.original <- c(0.88, 0.12, 0.067, 0.933) for PSI above and below 50 # Transition matrix from original consumer data.  Check/Ask for picture in Slack for all details.
+
+p.true <- matrix(c(0.25, 0.25, 0.25, 0.25, 
+                   0.25, 0.25, 0.25, 0.25, 
+                   0.25, 0.25, 0.25, 0.25, 
+                   0.25, 0.25, 0.25, 0.25), nrow = 4, ncol = 4)
+p.int <- matrix(c(0.7, 0.2, 0.1, 0,
+                  0.7, 0.2, 0.1, 0,
+                  0.2, 0.5, 0.2, 0.1,
+                  0.2, 0.5, 0.2, 0.1), nrow = 4, ncol = 4)
+P = array(c(p.true, p.int), dim=c(4,4,2))
+r.true <- matrix(c(100, 50, -25, -100,
+                   100, 40, -30, -100,
+                   100, 60, -40, -100,
+                   100, 60, -40, -100), nrow = 4, ncol = 4)*beta
+r.int <- matrix(c(100, 50, -25, -100,
+                  100, 40, -30, -100,
+                  100, 60, -40, -100,
+                  100, 60, -40, -100), nrow = 4, ncol = 4)
+R = array(c(r.true, r.int), dim=c(4,4,2))
+```
+
+## Expected rewards
+
+The immediate expected reward $q_{ik}$for performing an intervention $(k=1)$ and doing nothing $(k=2)$ for states $i$ is given by:
+
+\begin{equation}
+q_{ik} = \sum_{j=1}^{3} P\{i,j\}(k) r_{i,j}
+\end{equation}
+
+```{r}
+q = matrix(0, nrow = K, ncol = N)
+for(k in 1:K){
+  q[k,] = rowSums(t(P[,,k]*R[,,k]))
+}
+```
+
+
+```{r}
+mdp_check(P, R)
+# Discount factor
+discount <- 0.95
+# Objective is to maximize rewards
+# Linear Programming
+mdp_LP(P, R, discount)
+
+```
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
