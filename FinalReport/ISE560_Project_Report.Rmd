@@ -117,21 +117,10 @@ train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
 mdl2 <- train(nps ~ SeriesName + psi + stars, data=all,
               method = "lm", trControl = train.control)
 ```
-
 $$NPS_{consumer} = 2.43 + \beta_1 - 0.16 * PSI + 13.42 * stars$$
+$$NPS_{commericial} = 38.87 + \beta_1 + (\beta_2 - 0.49) * PSI$$
 
-where $\beta_1$ is unique for each Series in each segment as shown in the table below:
-
-
-```{r}
-beta_coeff <- mdl2$finalModel$coefficients[2:14]
-n <- sub("SeriesName", "", names(beta_coeff))
-knitr::kable(data.frame(n, unname(beta_coeff)), 
-             col.names = c("Consumer Series", "$\\beta_1$"),
-             caption = "Coefficients for Consumer Model")
-```
-
-$$NPS_{commericial} = 38.87 + \beta_1 + (\beta_2 - 0.49) * PSI$$ 
+where $\beta_i$ is unique for each Series in each segment as shown in the table below:
 
 ```{r}
 # Commercial Only
@@ -160,17 +149,41 @@ mdl4 <- train(nps ~ SeriesName*psi, data=all,
               method = "lm", trControl = train.control)
 ```
 
-Finally, we used k-fold cross validation to estimate the accuracy of the model for future predictions.  
+```{r}
+# Consumer
+beta_coeff <- round(mdl2$finalModel$coefficients[2:14], digits=2)
+nconsumer <- sub("SeriesName", "", names(beta_coeff))
+knitr::kable(data.frame(nconsumer, unname(beta_coeff)),
+             col.names = c("Consumer Series", "$\\beta_1$"),
+             caption = "Coefficients for Consumer Model") 
 
-```{r echo=FALSE}
-source("../src_lenovo_project.R")
-source("../LenovoAnalysis/data_prep.R")
-source("../LenovoAnalysis/helper_calcs.R")
+# Commercial
+beta_coeff1 <- round(mdl4$finalModel$coefficients[2:12], digits=2)
+beta_coeff2 <- round(mdl4$finalModel$coefficients[14:24], digits=2)
+ncomm <- sub("SeriesName", "", names(beta_coeff1))
+knitr::kable(data.frame(ncomm, unname(beta_coeff1), unname(beta_coeff2)), 
+             col.names = c("Commercial Series", "$\\beta_1$", "$\\beta_2$"),
+             caption = "Coefficients for Commercial Model") 
+
 ```
+
+TO DO: Figure out how to place tables side by side or if space is tight move to Appendix A
+
+Finally, we used k-fold cross validation to estimate the accuracy of the model for future predictions.
+
+TO DO:  Add plots here
 
 \section{Markov Decision Process}
 
-\subsection{Current Natural Evolution of NPS and PSI}
+\subsection{Natural Evolution of NPS and PSI}
+
+\subsection{``As Is" MDP}
+
+\subsection{Future MDP}
+
+\section{Customer Sentiment Analysis}
+
+\section{Recommendations}
 
 \clearpage
 
