@@ -44,30 +44,143 @@ bibliography: ise560report.bib
 
 \section{Introduction}
 
+Lenovo is an international company and a market leader in the personal computer industry.  One tool Lenovo relies upon in assessing customer satisfaction is Net Promoter Score (NPS); this is a standard metric used by major corporations across many industries.  However, latency is a limitation because it can take several months to aggregate sufficient data to calculate NPS.  Therefore our team was tasked with developing a model to predict NPS from more timely information such as customer comments and ratings from websites and telemetry data.
+
+In addition to developing a predictive model for NPS, our team also characterized the natural evolution of both NPS and customer sentiment over time.  These stochastic models form the basis for a Markov Decision Process (MDP) which can be used by Lenovo to identify the optimal actions to take based on the available information.  
+
+Finally, our team analyzed the customer sentiment and comments to identify factors correlated with the highest and lowest satistfaction products.  These results may help identify areas for Lenovo to focus further investments that can improve long-term customer satistifaction. Subsequent sections of this document provide detailed explanations of each phase of our analysis and associated recommendations.
+
+\section{Predictive Model}
+
+Our team considered three approaches to developing a predictive model--linear regression, proportional odds model and time series analysis--because these are the methods we are most familiar with and which also seemed potentially suitable for this problem.  We ultimately chose a linear model which will be described in detail here; a summary of the other methods and why we do not recommend them at this time can be found in Appendix \ref{app:PredModel}.
+
+We fit numerous linear models using combinations of the options listed below:
+\begin{enumerate}
+  \item Epoch: raw data grouped by week, bi-monthly and monthly
+  \item Segment: single segment (commercial and consumer combined) versus separate segements
+  \item Predictors: Product Sentiment Index (PSI), average star rating, Product Series, Product Name and interactions between predictors
+\end{enumerate}
+
+We then evaluated each model in a two-step phase process.  First, we examined residuals plots of each model to determine if key assumptions (normality and equal variances) of a linear model were satisfied.  Aggregating data weekly or bi-monthly often meant there were very few data points per epoch and/or there would be significant outliers which meant that one or both of the key assumptions were not satisfied.  Thus it was during this phase that we determined to aggregate data by month for fitting the linear model.  The second phase of our analysis used F-tests/ANOVA to identify predictors in the full model (PSI, average stars, Series and Series*PSI interaction) which did not significantly improve the model fit and thus could be removed to yield a more parsimonious model.  Detailed steps in the model selection can also be found in Appendix \ref{app:PredModel}.  Our final recommendation is two different models for the consumer and commercial segments:
+
 ```{r echo=FALSE, results='hide', message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 #knitr::opts_chunk$set(out.width="50%")
 knitr::opts_chunk$set(fig.align = "center")
 knitr::opts_chunk$set(message = FALSE)
 knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(error = FALSE)
 
 library(tidyverse)
 library(lubridate)
 library(grid)
 library(gridExtra)
+#library(kableExtra)
+library(tidyverse)
+library(car)
+library(caret)
+
+source("../src_lenovo_project.R")
+source("../LenovoAnalysis/data_prep.R")
+source("../LenovoAnalysis/helper_calcs.R")
+
+filter_raw_data()
+
+load("../CleanData/filtered_sentiment_data.Rdata")
+load("../CleanData/filtered_survey_data.Rdata")
+load("../CleanData/filtered_product_lists.Rdata")
 ```
-Introduction
-The overall question was how useful of a model could we make for Lenovo. We wanted the model to predict a specific score that could be compared to the industry. We then wanted this comparison to help Lenovo decide what action needed to be taken. The biggest problem we faced was how a prediction of NPS score can be made if we were only given reviews that were categorized as positive or negative, in addition to a star rating on a one to five scale. Our objective was to build the most accurate model we could to determine product NPS based off the sentiment rating (positive or negative) and star rating of a product. We determined if the product families should each be given a separate model, analyzed how the NPS scores were affected by the business group reviewing them, and determined how to make telemetry data useful despite there only being thirty days’ worth of data. We also determined if the product stars would change our predictions and how to account for any variation in our model. Lastly, we identified and constructed the type of model that would be most useful given the datasets we received. 
-Our team used the current data to build a model that can predict the product NPS scores by using sentiment and star data. The team developed NPS states based on the industry standards and Sentiment states based on which quintile they fell in within the range of PSI scores. In order to make the model as precise as possible, we recommend analyzing the data on a weekly basis as we did when we developed our model. The team has decided to consider telemetry data when developing a model since we identified strong correlations between telemetry categories and PSI scores.
-Concerns**
 
-Methodology
-Our recommendation is to build a linear regression model and create NPS states for the Markov decision process based on the three data sets. The predicted NPS score will be used in the Markov Decision Process which will allow Lenovo to see how an NPS score is expected to change over time.  
-Linear Regression Model In Detail***
-MDP In Detail***
+```{r}
+# Consumer Only
+psi <- sentiment.consumer.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  calcPSI()
 
+nps <- survey.consumer.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  calcNPS()
+
+# Combine to get data.frame with nps and psi matching by date and Series
+# Drop any Series with less than 3 data points (insufficient data)
+all <- inner_join(psi, nps) %>%
+  filter(total > 2) %>%
+  mutate(occurs = n()) %>%
+  filter(occurs > 3) %>%
+  drop_na()
+
+# Fit model without interaction term
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl2 <- train(nps ~ SeriesName + psi + stars, data=all,
+              method = "lm", trControl = train.control)
+```
+
+$$NPS_{consumer} = 2.43 + \beta_1 - 0.16 * PSI + 13.42 * stars$$
+
+where $\beta_1$ is unique for each Series in each segment as shown in the table below:
+
+
+```{r}
+beta_coeff <- mdl2$finalModel$coefficients[2:14]
+n <- sub("SeriesName", "", names(beta_coeff))
+knitr::kable(data.frame(n, unname(beta_coeff)), 
+             col.names = c("Consumer Series", "$\\beta_1$"),
+             caption = "Coefficients for Consumer Model")
+```
+
+$$NPS_{commericial} = 38.87 + \beta_1 + (\beta_2 - 0.49) * PSI$$ 
+
+```{r}
+# Commercial Only
+psi <- sentiment.comm.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  calcPSI()
+
+nps <- survey.comm.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  calcNPS()
+
+# Combine to get data.frame with nps and psi matching by date and Series
+# Drop any Series with less than 3 data points (insufficient data)
+all <- inner_join(psi, nps) %>%
+  #filter(total > 2) %>%
+  mutate(occurs = n()) %>%
+  filter(occurs > 3) %>%
+  drop_na()
+
+# Commercial model without stars
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl4 <- train(nps ~ SeriesName*psi, data=all,
+              method = "lm", trControl = train.control)
+```
+
+Finally, we used k-fold cross validation to estimate the accuracy of the model for future predictions.  
+
+```{r echo=FALSE}
+source("../src_lenovo_project.R")
+source("../LenovoAnalysis/data_prep.R")
+source("../LenovoAnalysis/helper_calcs.R")
+```
+
+\section{Markov Decision Process}
+
+\subsection{Current Natural Evolution of NPS and PSI}
 
 \clearpage
+
 \appendix
 
-\section{Test Appendix}
+\section{Predictive Model Approaches}\label{app:PredModel}
+
+\subsection{Linear Model}
+
+\subsection{Proportional Odds Model}
+
+\subsection{Time Series Analysis}
+
