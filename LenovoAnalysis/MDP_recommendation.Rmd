@@ -1,5 +1,5 @@
 ---
-title: "MDP with Telemetry"
+title: "Intervention Decision Using Telemetry and User Survey Information"
 author: "Shrikanth Yadav"
 date: "November 25, 2019"
 output: pdf_document
@@ -25,15 +25,17 @@ load("../CleanData/filtered_survey_data.Rdata")
 ```
 
 
-# Problem Formulation: Evolution Tracking
+# Problem Formulation
 
 ## States
 
-Our state matrix would be a combination of the telemetry and sentiment transition matrices.  Our final state would be $\{(++,N), (+,N),(0,N),(-,N),(- -,N),(++,AN), (+,AN),(0,AN),(-,AN),(- -,AN)\}$.  The states and ranges are described below:
+We consider the combination of telemetry and user survey as our states. We present a detailed description of the states and ranges.
 
-### Sentiment states 
+<!-- $\{(++,N), (+,N),(0,N),(-,N),(- -,N),(++,AN), (+,AN),(0,AN),(-,AN),(- -,AN)\}$.   -->
 
-We consider PSI values (Five states $S_S \in \{++,+, 0, -, - -\}$) and is referred to as $P_{S}$.
+### Survey Observations 
+
+NPS values are charasterised based on the industry considerations given in Table \ref{tab:NPS_table} <!--TO DO--> five 20\% quantiles denoted as $S_S \in \{++,+, 0, -, - -\}$) and is referred to as $P_{S}$ where:
 
   - ++: PSI above the 80\% quantile (Above 65)
   - +: PSI between 80 and 60\% quantile (between 60 and 65)
@@ -42,6 +44,7 @@ We consider PSI values (Five states $S_S \in \{++,+, 0, -, - -\}$) and is referr
   - - -: PSI below 20\% quantile (below 42)
 
 ```{r Preparation of sentiment matrix, echo=FALSE}
+
 n.sent = 5 
 tmp <- sentiment.consumer.all %>%
   group_by(#ProductName,
@@ -63,7 +66,7 @@ tmp = as.matrix(res$P,ncol = 5,nrow = 5)
 p.s = matrix(as.numeric(tmp[1:5,2:6]),ncol = 5, nrow= 5) %>% round(digits = 3)
 rownames(p.s) = colnames(tmp)[2:6]
 colnames(p.s) = colnames(tmp)[2:6]
-knitr::kable(res$P, row.names=TRUE, caption = "Transition matrix for consumer data (weekly)")
+knitr::kable(res$P, row.names=TRUE, caption = "Transition matrix for consumer Sentiment (weekly)")
 
 ```
 

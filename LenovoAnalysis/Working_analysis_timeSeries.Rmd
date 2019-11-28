@@ -57,7 +57,7 @@ con.nps.week <- survey.consumer%>%
 
   for(series in unique(con.nps.week$SeriesName)){
   slice = con.nps.week%>% filter(SeriesName == series ) %>% select(week, nps)
-  lag.plot(slice$nps,lags = 6)
+  # lag.plot(slice$nps,lags = 6)
 }
 
 
@@ -109,7 +109,7 @@ comm.nps.week <- survey.comm%>%
 
   for(series in unique(comm.nps.week$SeriesName)){
   slice = comm.nps.week%>% filter(SeriesName == series ) %>% select(week, nps)
-  lag.plot(slice$nps,lags = 6)
+  # lag.plot(slice$nps,lags = 6)
 }
 
 ```
@@ -125,7 +125,7 @@ acf(comm.psi.week$psi)
 
 # Auto.arima tests
 
-### Series wise test with ARMA for n-day averaging
+### Series wise test with ARMA for n-day averaging for consumer data
 
 ```{r}
 series.ts.main <- data.frame()
@@ -154,12 +154,47 @@ for(n in 1:30){
   }
   series.ts.main = rbind(series.ts.main, cbind(series.ts.summary,Duration = rep(n,nrow(series.ts.summary))))
 }
-series.ts.main
-ggplot(series.ts.main, aes(x = Duration, y = MAE, group = SeriesName)) + geom_line(size = 1)
+plt <- ggplot(series.ts.main, aes(x = Duration, y = MAE, color = SeriesName)) + geom_line(size = 1)+xlab("Duration of pNPS window (Days)")+ggtitle("Train set pNPS prediction errors as a function of the window size of downsampling.")+theme(legend.position = "bottom")
+
+save(plt,series.ts.main, file = "../CleanData/timeSeries.Rdata")
 ```
 
 
 
+### Series wise test with ARMA for n-day averaging for commercial data
+
+```{r}
+series.ts.main.com <- data.frame()
+
+
+for(n in 1:30){
+  con.psi.n <- sentiment.comm %>%
+    group_by(SeriesName, Date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = paste(n,"days"))) %>% calcPSI()
+  
+  con.nps.n <- survey.comm%>%
+    group_by(SeriesName, Date = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = paste(n,"days"))) %>%
+    calcNPS %>% 
+    drop_na()
+  
+  merged.df <- merge(con.psi.n, con.nps.n,  by = c("Date", "SeriesName"))
+    series.ts.summary <- data.frame(SeriesName = unique(merged.df$SeriesName),Order = NA, MAE = NA, RMSE = NA)
+  i = 1
+  for(series in unique(merged.df$SeriesName)){
+    slice = merged.df%>% filter(SeriesName == series ) %>% select(Date, nps, psi)
+    ax <- auto.arima(slice$nps)
+    # setNames(ax$arma, c("p", "q", "P", "Q", "m", "d", "D"))
+    series.ts.summary$MAE[i] = accuracy(ax)[3]
+    series.ts.summary$RMSE[i] = accuracy(ax)[2]
+    series.ts.summary$Order[i] = paste("(",ax$arma[1],",",ax$arma[2],",", ax$arma[5],")", sep = "")
+    i = i+1
+  }
+  series.ts.main.com = rbind(series.ts.main.com, cbind(series.ts.summary,Duration = rep(n,nrow(series.ts.summary))))
+}
+plt.con <- ggplot(series.ts.main, aes(x = Duration, y = MAE, color = SeriesName)) + geom_line(size = 1)+xlab("Duration of pNPS window (Days)")+ggtitle("Train set pNPS prediction errors vs window size for consumer data.")+theme(legend.position = "bottom")
+plt.com <- ggplot(series.ts.main.com, aes(x = Duration, y = MAE, color = SeriesName)) + geom_line(size = 1)+xlab("Duration of pNPS window (Days)")+ggtitle("Train set pNPS prediction errors vs window size for commercial data.")+theme(legend.position = "bottom")
+
+save(plt.con, plt.com,series.ts.main,series.ts.main.com, file = "../CleanData/timeSeries.Rdata")
+```
 
 
 
