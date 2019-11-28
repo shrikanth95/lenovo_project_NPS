@@ -1,0 +1,168 @@
+---
+title: "Analysis on Timeseries Models"
+author: "ISE 560"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width = "50%")
+knitr::opts_chunk$set(fig.align = "center")
+
+library(tidyverse)
+library(xts)
+library(tseries)
+library(forecast)
+library(zoo)
+
+source("helper_calcs.R")
+source("../src_lenovo_project.R")
+source("data_prep.R")
+```
+
+
+```{r}
+filter_raw_data()
+load("../CleanData/filtered_sentiment_data.Rdata")
+load("../CleanData/filtered_survey_data.Rdata")
+load("../CleanData/filtered_product_lists.Rdata")
+```
+
+Considering the pNPS score as realizations of a stochastic process, where the random variables are realizations of pNPS values, we present results of a classical time-series analysis. While the intention is analyze the statistical relationship between adjacent samples of pNPS calculations, the epoch overwhich the process is sampled will be discussed shortly.  
+
+### Autorgressive components of pNPS and PSI
+
+An initial analysis of the auto-regressive component of pNPS values sampled weekly in Figure~\ref{fig:}
+
+#### Lagplot of Consumer data
+
+```{r}
+con.psi.week <- sentiment.consumer %>%
+  group_by(SeriesName, week = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"), neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))%>% drop_na()
+con.nps.week <- survey.consumer%>%
+  group_by(SeriesName, week = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "week")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>% 
+  mutate(nps = 100 * (promoter - detractor) / total) %>% 
+  drop_na() %>% 
+  filter(SeriesName != "A SERIES") %>% # Remove series as there is only 1 sample
+  filter(SeriesName != "H SERIES") # Remove series as there is only 1 sample
+
+  for(series in unique(con.nps.week$SeriesName)){
+  slice = con.nps.week%>% filter(SeriesName == series ) %>% select(week, nps)
+  lag.plot(slice$nps,lags = 6)
+}
+
+
+```
+
+#### ACF of Consumer Data
+
+We observe that for the overall pNPS score of consumer data, the immediate lagged term ($x_{t-1}$) is observed to be significant. For PSI, we observe that the lagged terms are correlated till four lags $x_{t-4}$.  If we were to find a model for predicting pNPS data, we would have 
+
+$$X_{pNPS,t} = \alpha_1 X_{pNPS,t-1}$$
+for the pNPS and 
+
+$$X_{PSI,t} = \beta_1 X_{PSI,t-1}+\beta_2 X_{PSI,t-2}+\beta_3 X_{PSI,t-3}+\beta_2 X_{PSI,t-4}$$
+where $\alpha_1$ and $\beta_i$ $\forall i \in \{1,2,3,4\}$ are coefficients of the linear model making a 1-step prediction of pNPS and PSI respectively.
+
+```{r}
+series.ts.summary <- data.frame(SeriesName = unique(con.psi.week$SeriesName), equation = NA)
+
+for(series in unique(con.nps.week$SeriesName)){
+  slice = con.nps.week%>% filter(SeriesName == series ) %>% select(nps)
+  acf(slice$nps)
+}
+
+
+# acf(comm.psi.week$psi)
+# 
+# ggplot(comm.psi.week)+geom_line(aes(x = week, y = psi))
+acf(con.nps.week$nps)
+acf(con.psi.week$psi)
+# pacf(comm.nps.week$nps)
+```
+
+#### Commercial pNPS
+
+```{r}
+comm.psi.week <- sentiment.comm %>%
+  group_by(SeriesName, week = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "week")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"), neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg))%>% drop_na()
+comm.nps.week <- survey.comm%>%
+  group_by(SeriesName, week = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "week")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>% 
+  mutate(nps = 100 * (promoter - detractor) / total) %>% 
+  drop_na() %>% 
+  filter(SeriesName != "A SERIES") %>% # Remove series as there is only 1 sample
+  filter(SeriesName != "H SERIES") # Remove series as there is only 1 sample
+
+  for(series in unique(comm.nps.week$SeriesName)){
+  slice = comm.nps.week%>% filter(SeriesName == series ) %>% select(week, nps)
+  lag.plot(slice$nps,lags = 6)
+}
+
+```
+
+### ACF of Commercial Data
+
+We observe that for the overall pNPS score of commercial data, the immediate lagged term $x_{t-2}$ is observed to be significant.  There were no autoregressive terms that were significant for PSI scores in the commercial data.
+
+```{r}
+acf(comm.nps.week$nps)
+acf(comm.psi.week$psi)
+```
+
+# Auto.arima tests
+
+### Series wise test with ARMA for n-day averaging
+
+```{r}
+series.ts.main <- data.frame()
+
+
+for(n in 1:30){
+  con.psi.n <- sentiment.consumer %>%
+    group_by(SeriesName, Date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = paste(n,"days"))) %>% calcPSI()
+  
+  con.nps.n <- survey.consumer%>%
+    group_by(SeriesName, Date = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = paste(n,"days"))) %>%
+    calcNPS %>% 
+    drop_na()
+  
+  merged.df <- merge(con.psi.n, con.nps.n,  by = c("Date", "SeriesName"))
+    series.ts.summary <- data.frame(SeriesName = unique(merged.df$SeriesName),Order = NA, MAE = NA, RMSE = NA)
+  i = 1
+  for(series in unique(merged.df$SeriesName)){
+    slice = merged.df%>% filter(SeriesName == series ) %>% select(Date, nps, psi)
+    ax <- auto.arima(slice$nps)
+    # setNames(ax$arma, c("p", "q", "P", "Q", "m", "d", "D"))
+    series.ts.summary$MAE[i] = accuracy(ax)[3]
+    series.ts.summary$RMSE[i] = accuracy(ax)[2]
+    series.ts.summary$Order[i] = paste("(",ax$arma[1],",",ax$arma[2],",", ax$arma[5],")", sep = "")
+    i = i+1
+  }
+  series.ts.main = rbind(series.ts.main, cbind(series.ts.summary,Duration = rep(n,nrow(series.ts.summary))))
+}
+series.ts.main
+ggplot(series.ts.main, aes(x = Duration, y = MAE, group = SeriesName)) + geom_line(size = 1)
+```
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,62 @@
+---
+title: "Analysis on country and first release times"
+author: "Shrikanth"
+date: "11/27/2019"
+output: html_document
+---
+
+```{r}
+rm(list = ls())
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width = "50%")
+knitr::opts_chunk$set(fig.align = "center")
+
+library(tidyverse)
+source("../src_lenovo_project.R")
+source("data_prep.R")
+source("helper_calcs.R")
+filter_raw_data()
+library("dplyr")
+library("reshape2")# for dcast functio
+library("lubridate")
+library(ggplot2)
+library(cowplot)
+
+load("../CleanData/filtered_sentiment_data.Rdata")
+load("../CleanData/filtered_product_lists.Rdata")
+load("../CleanData/filtered_survey_data.Rdata")
+
+```
+
+
+## Isolation of Cateogries in Product Series for consumers
+
+```{r}
+
+unique(sentiment.consumer$Data.source)
+psi <- sentiment.consumer.all %>%
+  group_by(SeriesName, Data.source,
+           date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  calcPSI()
+
+nps <- survey.consumer.all %>%
+  group_by(SeriesName, Country,Ownership.Period, Primary.Use,
+           date = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  calcNPS()
+
+all <- inner_join(psi, nps) %>%
+  filter(total > 2) %>%
+  mutate(occurs = n()) %>%
+  filter(occurs > 3) %>%
+  drop_na()
+
+# Look at scatterplots 
+
+all %>%
+ggplot(aes(x=psi, y=nps, group=Country)) +
+  geom_point(alpha=0.5) +
+  geom_smooth(method="lm", se=FALSE, color="darkgrey") +
+  facet_wrap(.~SeriesName)
+
+```
