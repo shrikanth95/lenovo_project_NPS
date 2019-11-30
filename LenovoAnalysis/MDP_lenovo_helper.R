@@ -36,14 +36,14 @@ name <- function(variables) {
   
 }
 
-combine.telemetry.sentiment <- function(number.sentiment.states = n.sent,
+combine.telemetry.survey <- function(number.survey.states = n.sent,
                                         number.telemetry.states = n.tel, 
-                                        sentiment.probability.matix = p.s,
-                                        telemetry.probability.matix = p.t) {
+                                        survey.probability.matix = p.s,
+                                        telemetry.probability.matix = p.tel) {
   tmp <- array(0, dim = c(n.tel, n.tel, n.sent, n.sent))
   for(j in 1:(n.sent)){
     for(i in 1:(n.sent)){
-      tmp[,,j,i] = p.s[i,j]*p.t
+      tmp[,,j,i] = p.s[i,j]*p.tel
     }
   }
   
