@@ -237,13 +237,23 @@ We considered using either PSI or predicted NPS (pNPS) states as the basis for t
 
 We assumed two possible actions: {Do Nothing, Conduct Root Cause Analysis}
 
+<!-- \begin{table}[h!] -->
+<!-- \begin{tabular}{lc|c|c|c|c|c|} -->
+<!-- \cline{3-7} -->
+<!-- \multicolumn{1}{c}{}     &                & \multicolumn{5}{c|}{Applicable NPS States}  \\ \hline -->
+<!-- \multicolumn{1}{|c|}{ID} & Action         & Very Low & \begin{tabular}[c]{@{}c@{}}Moderately\\ Low\end{tabular} & Normal & \begin{tabular}[c]{@{}c@{}}Moderately \\ High\end{tabular} & Very High \\ \hline -->
+<!-- \multicolumn{1}{|l|}{1}  & Do Nothing                  & Y  & Y & N      & N  & N      \\ \hline -->
+<!-- \multicolumn{1}{|l|}{2}  & Conduct root cause analysis & Y  & Y & N      & N  & N       \\ \hline -->
+<!-- \end{tabular} -->
+<!-- \end{table} -->
+
 \begin{table}[h!]
 \begin{tabular}{lc|c|c|c|c|c|}
 \cline{3-7}
-\multicolumn{1}{c}{}     &                & \multicolumn{5}{c|}{Applicable NPS States}                                                                                                            \\ \hline
-\multicolumn{1}{|c|}{ID} & Action         & Very Low & \begin{tabular}[c]{@{}c@{}}Moderately\\ Low\end{tabular} & Normal & \begin{tabular}[c]{@{}c@{}}Moderately \\ High\end{tabular} & Very High \\ \hline
-\multicolumn{1}{|l|}{1}  & Do Nothing     & Y        & Y                                                        & N      & N                                                          & N         \\ \hline
-\multicolumn{1}{|l|}{2}  & Conduct root cause analysis & Y        & Y                                                        & N      & N                                   & N                      \\ \hline
+\multicolumn{1}{c}{}     &                & \multicolumn{5}{c|}{Applicable NPS States}  \\ \hline
+\multicolumn{1}{|c|}{ID} & Action         & Very Low & Moderately Low & Normal & Moderately High & Very High \\ \hline
+\multicolumn{1}{|l|}{1}  & Do Nothing                  & Y  & Y & N      & N  & N      \\ \hline
+\multicolumn{1}{|l|}{2}  & Conduct root cause analysis & Y  & Y & N      & N  & N       \\ \hline
 \end{tabular}
 \end{table}
 
@@ -290,10 +300,8 @@ NPS values are charasterised based on the industry considerations given in Table
   - -: PSI between 42 and 45
   - - -: PSI below 42
 
-```{r Preparation of sentiment matrix, echo=FALSE, eval=TRUE}
+```{r Preparation of sentiment matrix, echo=FALSE}
 
-#TO DO:  Something not right with line 252, setting chunk eval=TRUE for now so I can
-# knit the rest of the file
 n.sent = 5
 tmp <- survey.consumer.all %>%
   group_by(#ProductName,
