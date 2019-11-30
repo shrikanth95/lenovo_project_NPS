@@ -237,22 +237,21 @@ We considered using either PSI or predicted NPS (pNPS) states as the basis for t
 
 We assumed two possible actions: {Do Nothing, Conduct Root Cause Analysis}
 
-<!-- \begin{table}[h!] -->
-<!-- \begin{tabular}{lc|c|c|c|c|c|} -->
-<!-- \cline{3-7} -->
-<!-- \multicolumn{1}{c}{}     &                & \multicolumn{5}{c|}{Applicable NPS States}                                                                                                            \\ \hline -->
-<!-- \multicolumn{1}{|c|}{ID} & Action         & Very Low & \begin{tabular}[c]{@{}c@{}}Moderately\\ Low\end{tabular} & Normal & \begin{tabular}[c]{@{}c@{}}Moderately \\ High\end{tabular} & Very High \\ \hline -->
-<!-- \multicolumn{1}{|l|}{1}  & Do Nothing     & Y        & Y                                                        & N      & N                                                          & N         \\ \hline -->
-<!-- \multicolumn{1}{|l|}{2}  & Conduct root cause analysis & Y        & Y                                                        & N      & N                                   & N                      \\ \hline -->
-<!-- \end{tabular} -->
-<!-- \end{table} -->
+\begin{table}[h!]
+\begin{tabular}{lc|c|c|c|c|c|}
+\cline{3-7}
+\multicolumn{1}{c}{}     &                & \multicolumn{5}{c|}{Applicable NPS States}                                                                                                            \\ \hline
+\multicolumn{1}{|c|}{ID} & Action         & Very Low & \begin{tabular}[c]{@{}c@{}}Moderately\\ Low\end{tabular} & Normal & \begin{tabular}[c]{@{}c@{}}Moderately \\ High\end{tabular} & Very High \\ \hline
+\multicolumn{1}{|l|}{1}  & Do Nothing     & Y        & Y                                                        & N      & N                                                          & N         \\ \hline
+\multicolumn{1}{|l|}{2}  & Conduct root cause analysis & Y        & Y                                                        & N      & N                                   & N                      \\ \hline
+\end{tabular}
+\end{table}
 
 \subsection{Transitions}
 
 Using the above NPS states, we then calculated the natural evolution of NPS by month (i.e., same epoch as linear model).  This natural evolution is equivalent to
 
-```{r, eval=FALSE} 
-# TO DO: This snippet is preventing the tex file from compiling althgouh the code runs correctly.  
+```{r} 
 # Define NPS states
 NPS_VERY_HIGH <- 60.0
 NPS_MOD_HIGH <- 45.0
@@ -269,6 +268,7 @@ PConsumer_A1 <- res$P
 knitr::kable(PConsumer_A1, row.names=TRUE, caption = "Consumer, Do Nothing")
 
 ```
+
 \subsection{Rewards}
 
 \subsection{Future MDP}
@@ -326,8 +326,7 @@ Assuming we have a time-series of telemetry data, states can be defined between 
 
 An example of how the telemetry is used is as follows.
 
-```{r, echo=FALSE, eval=TRUE}
-# setting eval=TRUE for now until I get csv files so I can knit the rest of the file
+```{r, echo=FALSE}
 
 telemetry.con <- read.csv("../RawData/Driver_Health_consumer_ideapad.csv", header = TRUE)
 
@@ -353,7 +352,6 @@ We then define a threshold 50\% quantile level $\gamma$ above which the epoch is
 
 ```{r, echo=FALSE, eval=TRUE}
 
-#TO DO: setting eval=TRUE for now so I can knit the rest of the file.
 n.tel = 2
 p.tel = matrix(c(0.75, 0.25, 0.25, 0.75),nrow = 2, ncol = 2, byrow = TRUE)
 rownames(p.tel) <- c("N","AN")
@@ -401,8 +399,7 @@ The joint transition matrix $P_1$ is associated with the combination of $P_{S,1}
 
 A cost $r_k$ is incurred when an intervention $k\in\{1,2\}$ is performed.  The no-action cost matrix that incentivize transitions towards higher sentiment scores are denoted by $R_{T,S,1}$.
 
-```{r, echo= FALSE, eval=TRUE}
-# TO DO: setting eval=TRUE so I can knit the rest of the file
+```{r, echo= FALSE}
 R.st1 = matrix(c(140, 120, 75, 50, 30, -10, -25, -50, -100, -120,
                  130, 110, 70, 40, 20, -15, -30, -55, -100, -120,
                  120, 100, 65, 30, 10, -25, -35, -60, -100, -120,
