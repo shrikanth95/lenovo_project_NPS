@@ -10,8 +10,8 @@ header-includes:
    - \usepackage{enumitem}
    - \usepackage{float}
    - \usepackage{url}
-   - \usepackage{biblatex}
-   - \addbibresource{ise560report.bib}
+   # - \usepackage{biblatex}
+   # - \addbibresource{ise560report.bib}
    - \pagenumbering{gobble}
 output: 
   pdf_document:
@@ -223,7 +223,7 @@ The next phase of our analysis was to develop a Markov decision process (MDP) to
 
 \subsection{Natural Evolution of NPS and PSI}
 
-The first step in the MDP is to identify the possible states.  We considered both NPS and PSI.  For NPS, the following are standard categories for the computer/laptop industry \cite{nps19}: 
+The first step in the MDP is to identify the possible states.  We considered both NPS and PSI.  For NPS, the following are standard categories for the computer/laptop industry \cite{Nps19}: 
 
 \begin{itemize}
   \item Very Low: $NPS \le 8$
@@ -390,7 +390,9 @@ The reward matrix $R_{S,T,2}$ associated with an intervention should be calculat
 
 \clearpage
 
-\printbibliography
+\bibliographystyle{unsrt}
+\bibliography{ise560report}
+<!-- \printbibliography -->
 
 \clearpage
 
