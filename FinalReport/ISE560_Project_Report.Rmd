@@ -87,7 +87,7 @@ library(caret)
 source("../src_lenovo_project.R")
 source("../LenovoAnalysis/data_prep.R")
 source("../LenovoAnalysis/helper_calcs.R")
-
+source('../LenovoAnalysis/MDP_lenovo_helper.R', encoding = 'UTF-8')
 filter_raw_data()
 
 load("../CleanData/filtered_sentiment_data.Rdata")
@@ -223,7 +223,7 @@ The next phase of our analysis was to develop a Markov decision process (MDP) to
 
 \subsection{States}
 
-We considered using either PSI or predicted NPS (pNPS) states as the basis for the MDP.  The challenge with using PSI is that choosing states is somewhat arbitrary.  We considered standardizing the PSI scores and then delineating states using multiples of the standard deviation.  However, we felt that approach would not be as intuitive to understand because the states would not be defined according to the [-100, 100] scale Lenovo is familiar with for PSI.  On the other hand, there are established industry-standard categories for NPS\cite{Nps19}.  We chose to use these industry-standards as the basis for the pNPS states in our MDP, and they are listed below.   
+We considered using either PSI or predicted NPS (pNPS) states as the basis for the MDP.  The challenge with using PSI is that choosing states is somewhat arbitrary.  We considered standardizing the PSI scores and then delineating states using multiples of the standard deviation.  However, we felt that approach would not be as intuitive to understand because the states would not be defined according to the [-100, 100] scale Lenovo is familiar with for PSI.  On the other hand, there are established industry-standard categories for NPS\cite{Nps19}.  We chose to use these industry-standards as the basis for the pNPS states in our MDP, and they are listed below.
 
 \begin{itemize}
   \item Very Low: $pNPS \le 8$
@@ -237,21 +237,22 @@ We considered using either PSI or predicted NPS (pNPS) states as the basis for t
 
 We assumed two possible actions: {Do Nothing, Conduct Root Cause Analysis}
 
-\begin{table}[h!]
-\begin{tabular}{lc|c|c|c|c|c|}
-\cline{3-7}
-\multicolumn{1}{c}{}     &                & \multicolumn{5}{c|}{Applicable NPS States}                                                                                                            \\ \hline
-\multicolumn{1}{|c|}{ID} & Action         & Very Low & \begin{tabular}[c]{@{}c@{}}Moderately\\ Low\end{tabular} & Normal & \begin{tabular}[c]{@{}c@{}}Moderately \\ High\end{tabular} & Very High \\ \hline
-\multicolumn{1}{|l|}{1}  & Do Nothing     & Y        & Y                                                        & N      & N                                                          & N         \\ \hline
-\multicolumn{1}{|l|}{2}  & Conduct root cause analysis & Y        & Y                                                        & N      & N                                   & N                      \\ \hline
-\end{tabular}
-\end{table}
+<!-- \begin{table}[h!] -->
+<!-- \begin{tabular}{lc|c|c|c|c|c|} -->
+<!-- \cline{3-7} -->
+<!-- \multicolumn{1}{c}{}     &                & \multicolumn{5}{c|}{Applicable NPS States}                                                                                                            \\ \hline -->
+<!-- \multicolumn{1}{|c|}{ID} & Action         & Very Low & \begin{tabular}[c]{@{}c@{}}Moderately\\ Low\end{tabular} & Normal & \begin{tabular}[c]{@{}c@{}}Moderately \\ High\end{tabular} & Very High \\ \hline -->
+<!-- \multicolumn{1}{|l|}{1}  & Do Nothing     & Y        & Y                                                        & N      & N                                                          & N         \\ \hline -->
+<!-- \multicolumn{1}{|l|}{2}  & Conduct root cause analysis & Y        & Y                                                        & N      & N                                   & N                      \\ \hline -->
+<!-- \end{tabular} -->
+<!-- \end{table} -->
 
 \subsection{Transitions}
 
 Using the above NPS states, we then calculated the natural evolution of NPS by month (i.e., same epoch as linear model).  This natural evolution is equivalent to
-  
-```{r}
+
+```{r, eval=FALSE} 
+# TO DO: This snippet is preventing the tex file from compiling althgouh the code runs correctly.  
 # Define NPS states
 NPS_VERY_HIGH <- 60.0
 NPS_MOD_HIGH <- 45.0
@@ -260,7 +261,7 @@ NPS_MOD_LOW <- 8.0
 
 res <- survey.consumer.all %>%
   group_by(SeriesName,
-           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>% 
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>%
   NPSTransitions(NPS_VERY_HIGH, NPS_MOD_HIGH, NPS_NORMAL, NPS_MOD_LOW)
 
 PConsumer_A1 <- res$P
@@ -279,9 +280,9 @@ We present a framework to use temeletry and sentiment to make decisions on the r
 We consider the combination of telemetry and user survey as our states. We present a detailed description of the states and ranges.
 <!-- $\{(++,N), (+,N),(0,N),(-,N),(- -,N),(++,AN), (+,AN),(0,AN),(-,AN),(- -,AN)\}$.   -->
 
-### Survey Observations 
+### Survey Observations
 
-NPS values are charasterised based on the industry considerations given in Table \ref{tab:NPS_table} <!--TO DO--> five 20\% quantiles denoted as $S_S \in \{++,+, 0, -, - -\}$) and is referred to as $P_{S}$ where:
+NPS values are charasterised based on the industry considerations given in Table \ref{tab:NPS_table} five 20\% quantiles denoted as $S_S \in \{++,+, 0, -, - -\}$) and is referred to as $P_{S}$ where:
 
   - ++: PSI above 65
   - +: PSI between 60 and 65
@@ -289,14 +290,14 @@ NPS values are charasterised based on the industry considerations given in Table
   - -: PSI between 42 and 45
   - - -: PSI below 42
 
-```{r Preparation of sentiment matrix, echo=FALSE, eval=FALSE}
+```{r Preparation of sentiment matrix, echo=FALSE, eval=TRUE}
 
-#TO DO:  Something not right with line 252, setting chunk eval=FALSE for now so I can 
+#TO DO:  Something not right with line 252, setting chunk eval=TRUE for now so I can
 # knit the rest of the file
-n.sent = 5 
+n.sent = 5
 tmp <- survey.consumer.all %>%
   group_by(#ProductName,
-           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "week")) %>%
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "1 day")) %>%
   calcNPS()
 # Define PSI categories
 VERY_HIGH <- 60.0
@@ -306,7 +307,7 @@ MOD_LOW <- 8.0
 
 res <- survey.consumer.all %>%
   group_by(#ProductName,
-           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "week")) %>%
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "1 day")) %>%
   NPSTransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
 
 
@@ -321,12 +322,12 @@ knitr::kable(res$P, row.names=TRUE, caption = "Transition matrix for consumer su
 
 ### Telemetry
 
-Assuming we have a time-series of telemetry data, states can be defined between normal $N$ and abnormal $AN$ operation.  The no-action transition matrix can be constructed from defining thresholds in the hours of battery life and in the crash-rate related to specific driver updates (Two states $S_T\in \{N, AN\}$) and is referred to as $P_{T}$.
+Assuming we have a time-series of telemetry data, states can be defined between normal $N$ and abnormal $AN$ operation.  The no-action transition matrix can be constructed from defining thresholds in the hours of battery life and in the crash-rate related to specific driver updates (Two states $S_T \in \{N, AN\}$) and is referred to as $P_{T}$.
 
 An example of how the telemetry is used is as follows.
 
-```{r, echo=FALSE, eval=FALSE}
-# setting eval=FALSE for now until I get csv files so I can knit the rest of the file
+```{r, echo=FALSE, eval=TRUE}
+# setting eval=TRUE for now until I get csv files so I can knit the rest of the file
 
 telemetry.con <- read.csv("../RawData/Driver_Health_consumer_ideapad.csv", header = TRUE)
 
@@ -334,7 +335,7 @@ telemetry.con <- read.csv("../RawData/Driver_Health_consumer_ideapad.csv", heade
 telemetry.comm <- read.csv("../RawData/Driver_Health_consumer_ideapad.csv", header = TRUE)
 
 telemetry.con <- telemetry.con %>% mutate(Driver.Name = as.character(Driver.Name),
-                                          Crashes = as.numeric(Crashes), 
+                                          Crashes = as.numeric(Crashes),
                                           Percent.Impacted = as.numeric(sub("%", "",Percent.Impacted)),
                                           Total.Machines = as.numeric(Total.Machines)) %>%
   mutate(Percent.crash = Crashes/Total.Machines*100)
@@ -344,15 +345,15 @@ q.1 <- quantile(telemetry.con$Percent.crash[telemetry.con$Driver.Name == 'atikmp
 knitr::kable(q.1, caption = "For the crash-rate percentage, 0.25, 0.5 and 0.75 Quantiles of the atikmpag.sys driver are as follows.")
 ```
 
-Assuming driver updates are released because of a high crash-rate, we calculate the percent crash-rate from 
+Assuming driver updates are released because of a high crash-rate, we calculate the percent crash-rate from
 
 $$c_{t} =  \frac{\text{Number Crashes for a specifc driver}}{\text{Number Machines associted with the driver}}$$.
 
 We then define a threshold 50\% quantile level $\gamma$ above which the epoch is labelled as Abnormal operation.
 
-```{r, echo=FALSE, eval=FALSE}
+```{r, echo=FALSE, eval=TRUE}
 
-#TO DO: setting eval=FALSE for now so I can knit the rest of the file.
+#TO DO: setting eval=TRUE for now so I can knit the rest of the file.
 n.tel = 2
 p.tel = matrix(c(0.75, 0.25, 0.25, 0.75),nrow = 2, ncol = 2, byrow = TRUE)
 rownames(p.tel) <- c("N","AN")
@@ -367,16 +368,16 @@ The final state matrix $P$ would be a combination of $P_S$ and $P_T$ given by
 
 $$P_{1}(s,t->s_1,t_1) = P_S(s)P_S(s_1)P_T(t)P_T(t_1)$$
 
-```{r eval=FALSE}
+```{r eval=TRUE}
 # Calcualtion of combined state probability matrix
-P1 = combine.telemetry.sentiment(number.survey.states = n.sent,
+P1 = combine.telemetry.survey(number.survey.states = n.sent,
                             number.telemetry.states = n.tel,
-                            sentiment.probability.matix = p.s, 
+                            survey.probability.matix = p.s,
                             telemetry.probability.matix = p.tel)
 P1 <- round(P1,digits = 3)
 rownames(P1) <- c("++,N","+,N","0,N","-,N","- -,N","++,AN","+,AN","0,AN","-,AN","- -,AN")
 colnames(P1) <- c("++,N","+,N","0,N","-,N","- -,N","++,AN","+,AN","0,AN","-,AN","- -,AN")
-knitr::kable(P1 ,  caption = "A combined Telemetry-Sentiment State transition matrix.",  
+knitr::kable(P1 ,  caption = "A combined Telemetry-Sentiment State transition matrix.",
              row.names = TRUE)
 
 
@@ -385,11 +386,11 @@ knitr::kable(P1 ,  caption = "A combined Telemetry-Sentiment State transition ma
 
 ## Actions
 
-The actions are chosen between performing an intervention and doing nothing.  
+The actions are chosen between performing an intervention and doing nothing.
 
 - A shift towards normal operating mode is expected in the telemetry state transition matrix associated with an intervention.  The transition matrix is denoted as $P_{T,1}$.  As the telemetry is not provided, we assume that the transition probabilities corresponding to positive and negative sentiment will increase and decrease respectively by a predefined factor $\gamma_T$.  Note that $\gamma_T$ can be estimated by observing the percentage of impacted machines due to an intervention.
 
-- A relatively small shift is expected in the sentiment transition matrix as the population is relatively late to react to improvements.  This is referred to as $P_{S,1}$.The new sentiment transition matrix can be estimated similarly by choosing the fraction by which probabilities will change.  This is denoted by $\gamma_S$. Note that $\gamma_S<\gamma_T$.  
+- A relatively small shift is expected in the sentiment transition matrix as the population is relatively late to react to improvements.  This is referred to as $P_{S,1}$.The new sentiment transition matrix can be estimated similarly by choosing the fraction by which probabilities will change.  This is denoted by $\gamma_S$. Note that $\gamma_S<\gamma_T$.
 
 
 The joint transition matrix $P_1$ is associated with the combination of $P_{S,1}$ and $P_{T,1}$.
@@ -400,8 +401,8 @@ The joint transition matrix $P_1$ is associated with the combination of $P_{S,1}
 
 A cost $r_k$ is incurred when an intervention $k\in\{1,2\}$ is performed.  The no-action cost matrix that incentivize transitions towards higher sentiment scores are denoted by $R_{T,S,1}$.
 
-```{r, echo= FALSE, eval=FALSE}
-# TO DO: setting eval=FALSE so I can knit the rest of the file
+```{r, echo= FALSE, eval=TRUE}
+# TO DO: setting eval=TRUE so I can knit the rest of the file
 R.st1 = matrix(c(140, 120, 75, 50, 30, -10, -25, -50, -100, -120,
                  130, 110, 70, 40, 20, -15, -30, -55, -100, -120,
                  120, 100, 65, 30, 10, -25, -35, -60, -100, -120,
@@ -448,10 +449,10 @@ $$X_{t} = \sum_{i = 1}^p \alpha_i X_{t-i} + \sum_{j = 1}^q  \beta_j \theta_{t-j}
 where $\alpha_i$ $\forall i \in \{1,2,\ldots, p\}$  and $\beta_j$ $\forall j \in \{1,2,\ldots, q\}$ are coefficients of the linear model making a 1-step prediction of pNPS,  $\theta_t$ is the moving average component at time $t$ following a normal distribution with zero mean and variance $\sigma^2_w$. As the pNPS scores are heteroscedastic, the time series are also differenced $d$ times to satisfy the condition of stationarity.  Note that $p$, $d$ and $q$ are  referred to as the order of the model.  In Tables \ref{tab:ARIMA_Commercial} and \ref{tab:ARIMA_Consumer}, we present train set errors of best ARIMA model with the lowest Akaike information criterion (AIC) with order $(p,q,r)$.  The pNPS calcualtions were made over a period of seven days.  It is also observed that temporal correlation is sensitive to the series.
 
 ```{r}
-series.ts.main.com <- series.ts.main.com%>% mutate(MAE = round(MAE,digits = 2),RMSE = round(RMSE,digits = 2)) %>% 
+series.ts.main.com <- series.ts.main.com%>% mutate(MAE = round(MAE,digits = 2),RMSE = round(RMSE,digits = 2)) %>%
   filter(MAE != 0,SeriesName != "ACCESSORIES", SeriesName != "ANNIVERSARY")
-series.ts.main <- series.ts.main%>% mutate(MAE = round(MAE,digits = 2),RMSE = round(RMSE,digits = 2)) %>% 
-  filter(MAE != 0, SeriesName != "SMART HOME", SeriesName != "OTHER") 
+series.ts.main <- series.ts.main%>% mutate(MAE = round(MAE,digits = 2),RMSE = round(RMSE,digits = 2)) %>%
+  filter(MAE != 0, SeriesName != "SMART HOME", SeriesName != "OTHER")
 knitr::kable(series.ts.main.com[series.ts.main.com$Duration == 7,-5],row.names = FALSE,label = "tab:ARIMA_Commercial", caption = "Series wise Consumer Survey", col.names = c("Series", "Order", "MAE", "RMSE"))
 knitr::kable(series.ts.main[series.ts.main$Duration == 7,-5],row.names = FALSE,label = "tab:ARIMA_Consumer",caption = "Series wise Consumer Survey", col.names = c("Series", "Order", "MAE", "RMSE"))
 
@@ -459,7 +460,7 @@ knitr::kable(series.ts.main[series.ts.main$Duration == 7,-5],row.names = FALSE,l
 ```
 
 
-While the intention is analyze the statistical relationship between adjacent samples of pNPS calculations, the epoch overwhich the pNPS scores are varied from 1 to 30 days.  Figures \ref{fig:arima.comm} and \ref{fig:arima.con} shows the Mean Absolute Errors as a funtion of the epoch over which the pNPS score was calculated.  It is observed for a majority of the Series, the surveys are least correlated with a two-week window.   
+While the intention is analyze the statistical relationship between adjacent samples of pNPS calculations, the epoch overwhich the pNPS scores are varied from 1 to 30 days.  Figures \ref{fig:arima.comm} and \ref{fig:arima.con} shows the Mean Absolute Errors as a funtion of the epoch over which the pNPS score was calculated.  It is observed for a majority of the Series, the surveys are least correlated with a two-week window.
 
 ```{r figs, echo = FALSE,  fig.cap = "\\label{fig:arima.comm} Train set pNPS prediction errors vs window size for commercial data.", fig.width = 8}
 plt.com <- ggplot(series.ts.main.com, aes(x = Duration, y = MAE, color = SeriesName)) + geom_line(size = 1)+xlab("Duration of pNPS window (Days)")+theme(legend.position = "bottom")+labs(color = "")+guides(color = guide_legend(nrow = 4))
