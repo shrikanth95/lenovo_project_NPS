@@ -221,19 +221,54 @@ ggplot(aes(x=psi, y=nps, group=SeriesName)) +
 
 The next phase of our analysis was to develop a Markov decision process (MDP) to identify optimal policies based on customer sentiment or satisfaction.  Where Lenovo did not identify specific componenents (e.g., actions, rewards) necessary for the MDP, we will make assumptions and identify them as such.  As much as possible, we parameterized the assumptions so that Lenovo can easily modify our software to their specifications in the future.
 
-\subsection{Natural Evolution of NPS and PSI}
+\subsection{States}
 
-The first step in the MDP is to identify the possible states.  We considered both NPS and PSI.  For NPS, the following are standard categories for the computer/laptop industry \cite{Nps19}: 
+We considered using either PSI or predicted NPS (pNPS) states as the basis for the MDP.  The challenge with using PSI is that choosing states is somewhat arbitrary.  We considered standardizing the PSI scores and then delineating states using multiples of the standard deviation.  However, we felt that approach would not be as intuitive to understand because the states would not be defined according to the [-100, 100] scale Lenovo is familiar with for PSI.  On the other hand, there are established industry-standard categories for NPS\cite{Nps19}.  We chose to use these industry-standards as the basis for the pNPS states in our MDP, and they are listed below.   
 
 \begin{itemize}
-  \item Very Low: $NPS \le 8$
-  \item Moderately $Low: 8 < NPS \le 35$
-  \item Normal: $35 < NPS \le 45$
-  \item Moderately High: $45 < NPS \le 65$
-  \item Very High: $65 < NPS$
+  \item Very Low: $pNPS \le 8$
+  \item Moderately $Low: 8 < pNPS \le 35$
+  \item Normal: $35 < pNPS \le 45$
+  \item Moderately High: $45 < pNPS \le 65$
+  \item Very High: $65 < pNPS$
 \end{itemize}
 
-\subsection{``As Is" MDP}
+\subsection{Actions}
+
+We assumed two possible actions: {Do Nothing, Conduct Root Cause Analysis}
+
+\begin{table}[h!]
+\begin{tabular}{lc|c|c|c|c|c|}
+\cline{3-7}
+\multicolumn{1}{c}{}     &                & \multicolumn{5}{c|}{Applicable NPS States}                                                                                                            \\ \hline
+\multicolumn{1}{|c|}{ID} & Action         & Very Low & \begin{tabular}[c]{@{}c@{}}Moderately\\ Low\end{tabular} & Normal & \begin{tabular}[c]{@{}c@{}}Moderately \\ High\end{tabular} & Very High \\ \hline
+\multicolumn{1}{|l|}{1}  & Do Nothing     & Y        & Y                                                        & N      & N                                                          & N         \\ \hline
+\multicolumn{1}{|l|}{2}  & Conduct root cause analysis & Y        & Y                                                        & N      & N                                   & N                      \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Transitions}
+
+Using the above NPS states, we then calculated the natural evolution of NPS by month (i.e., same epoch as linear model).  This natural evolution is equivalent to
+  
+```{r}
+# Define NPS states
+NPS_VERY_HIGH <- 60.0
+NPS_MOD_HIGH <- 45.0
+NPS_NORMAL <- 35.0
+NPS_MOD_LOW <- 8.0
+
+res <- survey.consumer.all %>%
+  group_by(SeriesName,
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>% 
+  NPSTransitions(NPS_VERY_HIGH, NPS_MOD_HIGH, NPS_NORMAL, NPS_MOD_LOW)
+
+PConsumer_A1 <- res$P
+
+knitr::kable(PConsumer_A1, row.names=TRUE, caption = "Consumer, Do Nothing")
+
+```
+\subsection{Rewards}
 
 \subsection{Future MDP}
 
