@@ -9,18 +9,19 @@ header-includes:
    - \onehalfspacing
    - \usepackage{enumitem}
    - \usepackage{float}
+   - \usepackage{url}
+   # - \usepackage{biblatex}
+   # - \addbibresource{ise560report.bib}
    - \pagenumbering{gobble}
 output: 
   pdf_document:
     latex_engine: xelatex
     number_sections: true
     fig_caption: true
-
 documentclass: article
 fontsize: 12pt
 geometry: margin=1in 
 urlcolor: blue
-bibliography: ise560report.bib
 ---
 
 \begin{figure}[b!]
@@ -53,7 +54,7 @@ Finally, our team analyzed the customer sentiment and comments to identify facto
 
 \section{Predictive Model}
 
-Our team considered three approaches to developing a predictive model--linear regression, proportional odds model and time series analysis--because these are the methods we are most familiar with and which also seemed potentially suitable for this problem.  We ultimately chose a linear model which will be described in detail here; a summary of the other methods and why we do not recommend them at this time can be found in Appendix \ref{app:PredModel}.
+Our team considered three approaches to developing a predictive model--linear regression, proportional odds model and time series analysis--because these seemed potentially suitable for this problem and the team had previous experience with these modeling approaches.  We ultimately chose a linear model which will be described in detail here; a summary of the other methods and why we do not recommend them at this time can be found in Appendix \ref{app:PredModel}.
 
 We fit numerous linear models using combinations of the options listed below:
 \begin{enumerate}
@@ -62,9 +63,11 @@ We fit numerous linear models using combinations of the options listed below:
   \item Predictors: Product Sentiment Index (PSI), average star rating, Product Series, Product Name and interactions between predictors
 \end{enumerate}
 
-We then evaluated each model in a two-step phase process.  First, we examined residuals plots of each model to determine if key assumptions (normality and equal variances) of a linear model were satisfied.  Aggregating data weekly or bi-monthly often meant there were very few data points per epoch and/or there would be significant outliers which meant that one or both of the key assumptions were not satisfied.  Thus it was during this phase that we determined to aggregate data by month for fitting the linear model.  The second phase of our analysis used F-tests/ANOVA to identify predictors in the full model (PSI, average stars, Series and Series*PSI interaction) which did not significantly improve the model fit and thus could be removed to yield a more parsimonious model.  Detailed steps in the model selection can also be found in Appendix \ref{app:PredModel}.  Our final recommendation is two different models for the consumer and commercial segments:
+We then evaluated each model in a two-step phase process.  First, we examined residuals plots of each model to determine if key assumptions (normality and homogeneity of variance) of a linear model were satisfied.  Aggregating data weekly or bi-monthly often meant there were very few data points per epoch and/or there would be significant outliers which meant that one or both of the key assumptions were not satisfied.  Thus it was during this phase that we determined aggreating data by month yielded beter results for fitting the linear model.  The second phase of our analysis used F-tests/Analysis of Variance (ANOVA) to identify predictors in the full model (PSI, average stars, Series and Series*PSI interaction) which did not significantly improve the model fit and thus could be removed to yield a more parsimonious model.  Detailed steps in the model selection process can also be found in Appendix \ref{app:PredModel}.  Our final recommendation is two different models for the consumer and commercial segments:
 
 ```{r echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+rm(list=ls())
+
 knitr::opts_chunk$set(echo = FALSE)
 #knitr::opts_chunk$set(out.width="50%")
 knitr::opts_chunk$set(fig.align = "center")
@@ -108,7 +111,7 @@ nps <- survey.consumer.all %>%
 
 # Combine to get data.frame with nps and psi matching by date and Series
 # Drop any Series with less than 3 data points (insufficient data)
-all <- inner_join(psi, nps) %>%
+all_consumer <- inner_join(psi, nps) %>%
   filter(total > 2) %>%
   mutate(occurs = n()) %>%
   filter(occurs > 3) %>%
@@ -117,13 +120,14 @@ all <- inner_join(psi, nps) %>%
 # Fit model without interaction term
 train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
 
-mdl2 <- train(nps ~ SeriesName + psi + stars, data=all,
+mdl2 <- train(nps ~ SeriesName + psi + stars, data=all_consumer,
               method = "lm", trControl = train.control)
 ```
-$$NPS_{consumer} = 2.43 + \beta_1 - 0.16 * PSI + 13.42 * stars$$
-$$NPS_{commericial} = 38.87 + \beta_1 + (\beta_2 - 0.49) * PSI$$
 
-where $\beta_i$ is unique for each Series in each segment as shown in the table below:
+$$NPS_{consumer} = (2.43 + \beta_1) - 0.16 * PSI + 13.42 * stars$$
+$$NPS_{commercial} = (38.87 + \beta_1) + (\beta_2 - 0.49) * PSI$$
+
+where $\beta_i$ is unique for each Series in each segment as shown in the tables below:
 
 ```{r}
 # Commercial Only
@@ -139,7 +143,7 @@ nps <- survey.comm.all %>%
 
 # Combine to get data.frame with nps and psi matching by date and Series
 # Drop any Series with less than 3 data points (insufficient data)
-all <- inner_join(psi, nps) %>%
+all_comm <- inner_join(psi, nps) %>%
   #filter(total > 2) %>%
   mutate(occurs = n()) %>%
   filter(occurs > 3) %>%
@@ -148,7 +152,7 @@ all <- inner_join(psi, nps) %>%
 # Commercial model without stars
 train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
 
-mdl4 <- train(nps ~ SeriesName*psi, data=all,
+mdl4 <- train(nps ~ SeriesName*psi, data=all_comm,
               method = "lm", trControl = train.control)
 ```
 
@@ -172,13 +176,63 @@ knitr::kable(data.frame(ncomm, unname(beta_coeff1), unname(beta_coeff2)),
 
 TO DO: Figure out how to place tables side by side or if space is tight move to Appendix A
 
-Finally, we used k-fold cross validation to estimate the accuracy of the model for future predictions.
+After model selection, we used k-fold cross validation to estimate the accuracy of the model for future predictions. While the model selection process did result in statistically significant coefficients for PSI and stars, the results from the k-fold cross validation show that both model still leave significant room for improvement based on the Root Mean Square Error and Mean Absolute Error (Table \ref{tbl:KFold}).
 
-TO DO:  Add plots here
+\begin{table}[ht]
+\centering
+\caption{Summary of K-fold Cross-Validation Results}
+\begin{tabular}{l|c|c|c|}
+\cline{2-4}
+\multicolumn{1}{c|}{}                  & F-test p-value   & RMSE  & MAE    \\ \hline
+\multicolumn{1}{|l|}{Consumer Model}   & \textless{}0.001 & 25.96 & 19.69  \\ \hline
+\multicolumn{1}{|l|}{Commercial Model} & \textless{}0.001 & 28.85 & -21.73 \\ \hline
+\end{tabular}
+\label{tbl:KFold}
+\end{table}
+
+It is perhaps easiest to understand these results by comparing plots of observed versus predicted.  Figures \ref{fig:mdlConsumer} and \ref{fig:mdlComm} are scatterplots for the Consumer and Commercial data, respectively.  In both sets of plots, the grey points are the observed (NPS, PSI) scores, the grey line is the regression line for the marginal model $NPS = \beta_o + \beta_1 * PSI$ and the red dots are the _predicted values_ from equations (1) and (2) respectively.  One can clearly see that while the predicted (red) points follow the general trend of the observed (grey) points, there is still significant variation that is not accounted for by the models.  If Lenovo started archiving the telemetry data, then models could be refit once several months of data is available; it is entirely possible incorporating telemetry data into the model could reduce the unaccounted for variation and give even better predictions.
+
+TO DO: Number equations for linear models
+
+```{r fig.cap="\\label{fig:mdlConsumer}Marginal Model Plots, Consumer NPS vs. PSI", fig.pos="H"}
+# Look at scatterplots fitted vs actual
+
+cbind(all_consumer, 
+      pred2=predict(mdl2$finalModel)) %>%
+ggplot(aes(x=psi, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE, color="darkgrey") +
+  geom_point(aes(y=pred2), alpha=0.3, color="red") +
+  facet_wrap(~SeriesName)
+```
+
+```{r fig.cap="\\label{fig:mdlComm}Marginal Model Plots, Commercial NPS vs. PSI", fig.pos="H"}
+# Look at scatterplots fitted vs actual
+
+cbind(all_comm, 
+      pred4=predict(mdl4$finalModel)) %>%
+ggplot(aes(x=psi, y=nps, group=SeriesName)) +
+  geom_point(alpha=0.3) +
+  geom_smooth(method="lm", se=FALSE, color="darkgrey") +
+  geom_point(aes(y=pred4), alpha=0.3, color="red") +
+  facet_wrap(~SeriesName)
+```
 
 \section{Markov Decision Process}
 
+The next phase of our analysis was to develop a Markov decision process (MDP) to identify optimal policies based on customer sentiment or satisfaction.  Where Lenovo did not identify specific componenents (e.g., actions, rewards) necessary for the MDP, we will make assumptions and identify them as such.  As much as possible, we parameterized the assumptions so that Lenovo can easily modify our software to their specifications in the future.
+
 \subsection{Natural Evolution of NPS and PSI}
+
+The first step in the MDP is to identify the possible states.  We considered both NPS and PSI.  For NPS, the following are standard categories for the computer/laptop industry \cite{Nps19}: 
+
+\begin{itemize}
+  \item Very Low: $NPS \le 8$
+  \item Moderately $Low: 8 < NPS \le 35$
+  \item Normal: $35 < NPS \le 45$
+  \item Moderately High: $45 < NPS \le 65$
+  \item Very High: $65 < NPS$
+\end{itemize}
 
 \subsection{``As Is" MDP}
 
@@ -195,8 +249,21 @@ We consider the combination of telemetry and user survey as our states. We prese
 
 NPS values are charasterized based on the industry considerations given in Table \ref{tab:NPS_table} <!--TO DO--> five 20\% quantiles denoted as $S_S \in \{++,+, 0, -, - -\}$) and is referred to as $P_{S}$.
 
-```{r Preparation of survey matrix, echo=FALSE}
+<<<<<<< HEAD
+# ```{r Preparation of survey matrix, echo=FALSE}
+<!-- # ======= -->
+  - ++: PSI above 65
+  - +: PSI between 60 and 65
+  - 0: PSI between 45 and 60
+  - -: PSI between 42 and 45
+  - - -: PSI below 42
 
+
+```{r Preparation of sentiment matrix, echo=FALSE, eval=TRUE}
+# >>>>>>> 8f7cca6498834e603c898edafceea569965c9927
+
+#TO DO:  Something not right with line 252, setting chunk eval=FALSE for now so I can 
+# knit the rest of the file
 n.sent = 5 
 tmp <- survey.consumer.all %>%
   group_by(time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "1 day")) %>%
@@ -207,9 +274,11 @@ MOD_HIGH <- 45.0
 NORMAL <- 35.0
 MOD_LOW <- 8.0
 
+# <<<<<<< HEAD
 res <- survey.comm.all %>%
    group_by(time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "1 day")) %>%
    NPSTransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+# >>>>>>> 8f7cca6498834e603c898edafceea569965c9927
 
 
 tmp = as.matrix(res$P,ncol = 5,nrow = 5)
@@ -227,9 +296,12 @@ Assuming we have a time-series of telemetry data, states can be defined between 
 
 An example of how the telemetry is used is as follows.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=TRUE}
+# setting eval=FALSE for now until I get csv files so I can knit the rest of the file
+
 telemetry.con <- read.csv("../RawData/Driver_Health_consumer_ideapad.csv", header = TRUE)
 
+# TO DO:  I think there's a cut & paste typo because filename below is identical to one above
 telemetry.comm <- read.csv("../RawData/Driver_Health_consumer_ideapad.csv", header = TRUE)
 
 telemetry.con <- telemetry.con %>% mutate(Driver.Name = as.character(Driver.Name),
@@ -248,7 +320,9 @@ Assuming driver updates are released because of a high crash-rate, we calculate 
 $$c_{t} =  \frac{\text{Number Crashes for a specifc driver}}{\text{Number Machines associted with the driver}}$$.
 We then define a threshold 50\% quantile level $\gamma$ above which the epoch is labelled as Abnormal operation.  Transition matrices can be constructed by backlogging telemetry data.  
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=TRUE}
+
+#TO DO: setting eval=FALSE for now so I can knit the rest of the file.
 n.tel = 2
 p.tel = matrix(c(0.75, 0.25, 0.25, 0.75),nrow = 2, ncol = 2, byrow = TRUE)
 rownames(p.tel) <- c("N","AN")
@@ -262,7 +336,7 @@ The final state matrix $P$ would be a combination of $P_S$ and $P_T$ given by
 
 $$P_{1}(s,t->s_1,t_1) = P_S(s)P_S(s_1)P_T(t)P_T(t_1)$$
 
-```{r}
+```{r eval=TRUE}
 # Calcualtion of combined state probability matrix
 P1 = combine.telemetry.survey(number.survey.states = n.sent,
                             number.telemetry.states = n.tel,
@@ -307,7 +381,8 @@ knitr::kable(P2, row.names=TRUE, caption = "\\label{tab:action1_prob1} Consumer,
 
 A cost $r_k$ is incurred when an intervention $k\in\{1,2\}$ is performed.  The no-action cost matrix that incentivize transitions towards higher survey scores are denoted by $R_{T,S,1}$.
 
-```{r, echo= FALSE}
+```{r, echo= FALSE, eval=TRUE}
+# TO DO: setting eval=FALSE so I can knit the rest of the file
 R.st1 = matrix(c(140, 120, 75, 50, 30, -10, -25, -50, -100, -120,
                  130, 110, 70, 40, 20, -15, -30, -55, -100, -120,
                  120, 100, 65, 30, 10, -25, -35, -60, -100, -120,
@@ -346,6 +421,12 @@ R <- array(c(R1, R2), dim=c(3,2))
 \section{Customer Sentiment Analysis}
 
 \section{Recommendations}
+
+\clearpage
+
+\bibliographystyle{unsrt}
+\bibliography{ise560report}
+<!-- \printbibliography -->
 
 \clearpage
 
@@ -388,3 +469,4 @@ plt.com
 plt.con <- ggplot(series.ts.main, aes(x = Duration, y = MAE, color = SeriesName)) + geom_line(size = 1)+xlab("Duration of pNPS window (Days)")+theme(legend.position = "bottom")+labs(color = "")+guides(color = guide_legend(nrow = 4))
 plt.con
 ```
+
