@@ -59,17 +59,16 @@ psi.working.week.all <- cis.main %>%
   group_by(week = floor_date(Comment.Date, unit = "week")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
             neg = sum(Sentiment == "NEGATIVE"),
-            avg.star = mean(Stars.Rating)) %>%
-  mutate(psi = 100 * (pos - neg)/(pos +  neg))
-
-unique(pnps.working.week.all$Ownership.period)
+            pos.star = sum(Stars.Rating <3),
+            neg.star = sum(Stars.Rating>3),
+            total = n()) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg),
+         star.index = 100*(pos.star - neg.star)/(total))
 ```
 
 # Calcualte pNPS according to Month
 
 ```{r}
-
-
 pnps.working.month.all <- data.frame()
 for(duration in ownership.durations){
   pnps.working.month.all <- pnps.working.month.all %>%
@@ -81,16 +80,16 @@ for(duration in ownership.durations){
             mutate(nps = 100 * (promoter - detractor) / total,
                    Ownership.period = duration))
 }
-unique(pnps.working.month.all$Ownership.period)
+
 psi.working.month.all <- cis.main %>%
   group_by(month = floor_date(Comment.Date, unit = "month")) %>%
   summarise(pos = sum(Sentiment == "POSITIVE"),
             neg = sum(Sentiment == "NEGATIVE"),
-            avg.star = mean(Stars.Rating)) %>%
-  mutate(psi = 100 * (pos - neg)/(pos +  neg))
-
-
-
+            pos.star = sum(Stars.Rating <3),
+            neg.star = sum(Stars.Rating>3),
+            total = n()) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg),
+         star.index = 100*(pos.star - neg.star)/(pos+neg))
 ```
 
 ```{r}
@@ -98,11 +97,18 @@ psi.working.month.all <- cis.main %>%
 plt <- ggplot() +
   geom_line(data = pnps.working.month.all, mapping = aes(x=month, y=nps, color="NPS")) +
   geom_line(data = psi.working.month.all, mapping = aes(x=month, y=psi, color="PSI"))+
-  geom_line(data = psi.working.month.all, mapping = aes(x=month, y=avg.star*20, color="Star Rating * 20"))+
+  geom_line(data = psi.working.month.all, mapping = aes(x=month, y=star.index, color="Star Index"))+
   facet_wrap(.~Ownership.period,nrow = 2)+
   labs(title="NPS, PSI and Star Rating for All Consumer Products", color = "Metrics:")+ylab("")+xlab("Time")+
   theme(legend.position = "bottom")
-  ggsave(plot = plt,filename = "Proposal/Figures/all_metric_summary_consumer.pdf",width = 8, height = 4,units = "in")
+ggsave(plot = plt,filename = "Proposal/Figures/all_metric_summary_consumer.pdf",width = 8, height = 5,units = "in")
+```
+
+
+## Autocorrelation of Metrics based on series
+We calcualte the ACF of the 
+```{r}
+
 ```
 
 
