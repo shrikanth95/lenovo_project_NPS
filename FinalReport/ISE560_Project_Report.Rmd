@@ -70,7 +70,7 @@ We then evaluated each model in a two-step process.  First, we examined residual
 rm(list=ls())
 
 knitr::opts_chunk$set(echo = FALSE)
-#knitr::opts_chunk$set(out.width="50%")
+knitr::opts_chunk$set(out.width="75%")
 knitr::opts_chunk$set(fig.align = "center")
 knitr::opts_chunk$set(message = FALSE)
 knitr::opts_chunk$set(warning = FALSE)
@@ -193,7 +193,7 @@ It is perhaps easier to understand these results by comparing plots of observed 
 
 TO DO: Number equations for linear models
 
-```{r fig.cap="\\label{fig:mdlConsumer}Marginal Model Plots, Consumer NPS vs. PSI", fig.pos="H"}
+```{r fig.cap="\\label{fig:mdlConsumer}Marginal Model Plots, Consumer NPS vs. PSI"}
 # Look at scatterplots fitted vs actual
 
 cbind(all_consumer, 
@@ -205,7 +205,7 @@ ggplot(aes(x=psi, y=nps, group=SeriesName)) +
   facet_wrap(~SeriesName)
 ```
 
-```{r fig.cap="\\label{fig:mdlComm}Marginal Model Plots, Commercial NPS vs. PSI", fig.pos="H"}
+```{r fig.cap="\\label{fig:mdlComm}Marginal Model Plots, Commercial NPS vs. PSI"}
 # Look at scatterplots fitted vs actual
 
 cbind(all_comm, 
