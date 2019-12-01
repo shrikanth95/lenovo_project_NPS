@@ -138,3 +138,27 @@ NPSTransitions <- function(df, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
   list(P = P,
        counts = counts)
 }
+
+#
+# Combines two transition matrices
+#
+combine.matrix <- function(A,B) 
+{
+  nA <- nrow(A)
+  nB <- nrow(B)
+  n <- nA * nB
+  tmp <- array(0, dim = c(n, n))
+  
+  for(row in 1:nB)
+  {
+    for(col in 1:nB) 
+    {
+      blk_row = (1+(row-1)*nA):(nA*(row))
+      blk_col = (1+(col-1)*nA):(nA*(col))
+      tmp[blk_row, blk_col] <- A * B[row,col]
+    }
+ 
+  }
+  
+  return(tmp)
+}

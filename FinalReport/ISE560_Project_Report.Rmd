@@ -208,16 +208,20 @@ The next phase of our analysis developed a Markov decision process (MDP) to iden
 We considered using either PSI or predicted NPS  states as the basis for the MDP.  The challenge with using PSI is that defining states is somewhat arbitrary.  We considered standardizing the PSI scores and then delineating states using multiples of the standard deviation.  However, we felt that approach would not be as intuitive to understand because the states would not be defined according to the [-100, 100] scale Lenovo is familiar with for PSI.  On the other hand, there are established industry-standard categories for NPS\cite{Nps19}.  Therefore, we chose to use these industry-standards as the basis for the predicted NPS states in our MDP, and they are listed below.
 
 \begin{itemize}[noitemsep]
-  \item Very Low: $NPS \le 8$
-  \item Moderately Low: $8 < NPS \le 35$
-  \item Normal: $35 < NPS \le 45$
-  \item Moderately High: $45 < NPS \le 65$
-  \item Very High: $65 < NPS$
+  \item Very Low (--): $NPS \le 8$ 
+  \item Moderately Low (-): $8 < NPS \le 35$ 
+  \item Normal (0): $35 < NPS \le 45$ 
+  \item Moderately High (+): $45 < NPS \le 65$ 
+  \item Very High (++): $65 < NPS$ 
 \end{itemize}
+
+We will include telemetry status in the MDP since Lenovo would like to make use of telemetry in the future.  We will assume there are two possible telemetry states, Normal (N) and Abnormal (A).  See Appendix \ref{app:tm} for an example of how Normal/Abnormal states can be characterized once Lenovo has archived several months worth of data.
+
+Therefore the possible combined states for the MDP are {(++,N), (++,A), (+,N), (+,A), (0,N), (0,A), (-,N), (-,A), (--,N), (--,A)}
 
 \subsection{Actions}
 
-We assume two possible actions: {Do Nothing, Conduct Root Cause Analysis}
+We assume two possible actions: {Do Nothing, Conduct Root Cause Analysis}.  Further, we will assume that a root cause analysis would only be considered if the NPS state is Very Low or Moderately Low.
 
 \begin{table}[h!]
 \centering
@@ -233,22 +237,73 @@ We assume two possible actions: {Do Nothing, Conduct Root Cause Analysis}
 
 \subsection{Transitions}
 
-Using the above NPS states, we then calculated the natural evolution of NPS by month (i.e., same epoch as linear model).  This natural evolution is equivalent to the "Do Nothing" Action.
+We then calculated the natural evolution of NPS by month (i.e., same epoch as linear model) from the survey data.
 
 \begin{table}[h!]
-\caption{Consumer, Action = Do Nothing}
+\caption{Consumer, NPS Only, Action = Do Nothing}
 \centering
 \begin{tabular}{l|c|c|c|c|c|}
 \cline{2-6}
-\multicolumn{1}{c|}{}      & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
-\multicolumn{1}{|l|}{Very Low} & 0.451    & 0.220    & 0.055   & 0.143 & 0.132    \\ \hline
-\multicolumn{1}{|l|}{Mod. Low} & 0202    & 0.506    & 0.079   & 0.101  & 0.111       \\ \hline
-\multicolumn{1}{|l|}{Normal}   & 0.161   & 0.355  & 0.194     & 0.160   & 0.097       \\ \hline
-\multicolumn{1}{|l|}{Mod High} & 0.200  & 0.220    & 0.160     & 0.200  & 0.220       \\ \hline
-\multicolumn{1}{|l|}{Very High} & 0.214    & 0.054    & 0.125     & 0.161    & 0.446      \\ \hline
+\multicolumn{1}{c|}{}      & - - & - & 0 & + & ++ \\ \hline
+\multicolumn{1}{|l|}{- -} & 0.451    & 0.220    & 0.055   & 0.143 & 0.132    \\ \hline
+\multicolumn{1}{|l|}{-} & 0202    & 0.506    & 0.079   & 0.101  & 0.111       \\ \hline
+\multicolumn{1}{|l|}{0}   & 0.161   & 0.355  & 0.194     & 0.160   & 0.097       \\ \hline
+\multicolumn{1}{|l|}{+} & 0.200  & 0.220    & 0.160     & 0.200  & 0.220       \\ \hline
+\multicolumn{1}{|l|}{++} & 0.214    & 0.054    & 0.125     & 0.161    & 0.446      \\ \hline
 \end{tabular}
 \label{tbl:P1}
 \end{table}
+
+Since we do not have enough data to calculate the natural evolution of Telemetry states, we will assume the following:
+
+\begin{table}[h!]
+\caption{Consumer, Telemetry Only, Action = Do Nothing}
+\centering
+\begin{tabular}{l|c|c|}
+\cline{2-3}
+\multicolumn{1}{c|}{}      & N & A  \\ \hline
+\multicolumn{1}{|l|}{N}      & 0.75 & 0.25  \\ \hline
+\multicolumn{1}{|l|}{A}      & 0.25 & 0.75  \\ \hline
+\end{tabular}
+\end{table}
+
+We then combine the individual transition matrices to form the transition matrix for our MDP.  This natural evolution for the combined states is equivalent to the "Do Nothing" action.
+
+```{r}
+
+tmp <- survey.consumer.all %>%
+  group_by(SeriesName,
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>%
+  calcNPS()
+
+# Define NPS categories
+VERY_HIGH <- 60.0
+MOD_HIGH <- 45.0
+NORMAL <- 35.0
+MOD_LOW <- 8.0
+
+res <- survey.consumer.all %>%
+  group_by(SeriesName,
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>%
+  NPSTransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
+
+p.s = as.matrix(res$P[,2:6])
+
+# Define telemetry matrix
+p.tel = matrix(c(0.75, 0.25, 0.25, 0.75),nrow = 2, ncol = 2, byrow = TRUE)
+rownames(p.tel) <- c("N","A")
+colnames(p.tel) <- c("N","A")
+
+P1 = combine.matrix(p.s,
+                    p.tel)
+
+
+rownames(P1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
+colnames(P1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
+
+knitr::kable(round(P1, digits=3), row.names=TRUE, caption = "Consumer, All States, Action = Do Nothing")
+
+```
 
 Next, we assume the action "Conduct Root Cause Analysis" reduces the probability of transitioning to Very_Low by $100p\%$ as compared to "Do Nothing", and that percentage is evenly distributed among the remaining 4 states.  For example, if $p=0.1$ then the transition matrix for ``Conduct Root Cause Analysis" is shown in Table \ref{tbl:P2}.
 
@@ -337,14 +392,7 @@ Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0
 \label{tbl:MDP}
 \end{table}
 
-\subsection{Future MDP}
 
-We present a framework to use temeletry and sentiment to make decisions on the releasing software interventions using Markov Decision Processes.  In what follows, we describe the states, actions and compute transition probabilities with intervention.
-
-## States
-
-We consider the combination of telemetry and user survey as our states. We present a detailed description of the states and ranges.
-<!-- $\{(++,N), (+,N),(0,N),(-,N),(- -,N),(++,AN), (+,AN),(0,AN),(-,AN),(- -,AN)\}$.   -->
 
 ### Survey Observations
 
