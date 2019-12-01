@@ -235,14 +235,15 @@ We assume two possible actions: {Do Nothing, Conduct Root Cause Analysis}.  Furt
 \end{tabular}
 \end{table}
 
-\subsection{Transitions}
+\subsection{Transitions}\label{sec:transitions}
 
-We then calculated the natural evolution of NPS by month (i.e., same epoch as linear model) from the survey data.
+We calculated the natural evolution of NPS by month (i.e., same epoch as linear model) from the survey data.  Since we do not have enough data to calculate the natural evolution of Telemetry states, we will assume a transition matrix as shown below.
 
 \begin{table}[h!]
-\caption{Consumer, NPS Only, Action = Do Nothing}
+\caption{Individual Transition Matrices, NPS and Telemetry}
 \centering
-\begin{tabular}{l|c|c|c|c|c|}
+\hspace*{\fill}
+\begin{tabular}[t]{l|c|c|c|c|c|}
 \cline{2-6}
 \multicolumn{1}{c|}{}      & - - & - & 0 & + & ++ \\ \hline
 \multicolumn{1}{|l|}{- -} & 0.451    & 0.220    & 0.055   & 0.143 & 0.132    \\ \hline
@@ -251,23 +252,18 @@ We then calculated the natural evolution of NPS by month (i.e., same epoch as li
 \multicolumn{1}{|l|}{+} & 0.200  & 0.220    & 0.160     & 0.200  & 0.220       \\ \hline
 \multicolumn{1}{|l|}{++} & 0.214    & 0.054    & 0.125     & 0.161    & 0.446      \\ \hline
 \end{tabular}
-\label{tbl:P1}
-\end{table}
-
-Since we do not have enough data to calculate the natural evolution of Telemetry states, we will assume the following:
-
-\begin{table}[h!]
-\caption{Consumer, Telemetry Only, Action = Do Nothing}
-\centering
-\begin{tabular}{l|c|c|}
+\hfill
+\begin{tabular}[t]{l|c|c|}
 \cline{2-3}
 \multicolumn{1}{c|}{}      & N & A  \\ \hline
 \multicolumn{1}{|l|}{N}      & 0.75 & 0.25  \\ \hline
 \multicolumn{1}{|l|}{A}      & 0.25 & 0.75  \\ \hline
 \end{tabular}
+\hspace*{\fill}
+\label{tbl:P1}
 \end{table}
 
-We then combine the individual transition matrices to form the transition matrix for our MDP.  This natural evolution for the combined states is equivalent to the "Do Nothing" action.
+We combined the individual transition matrices to form the transition matrix for our MDP.  This natural evolution for the combined states is equivalent to the "Do Nothing" action.
 
 ```{r}
 
@@ -301,77 +297,111 @@ P1 = combine.matrix(p.s,
 rownames(P1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
 colnames(P1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
 
-knitr::kable(round(P1, digits=3), row.names=TRUE, caption = "Consumer, All States, Action = Do Nothing")
+knitr::kable(round(P1, digits=3), row.names=TRUE, caption = "Consumer, All States, Action = Do Nothing  \\label{tbl:P1}")
 
 ```
 
-Next, we assume the action "Conduct Root Cause Analysis" reduces the probability of transitioning to Very_Low by $100p\%$ as compared to "Do Nothing", and that percentage is evenly distributed among the remaining 4 states.  For example, if $p=0.1$ then the transition matrix for ``Conduct Root Cause Analysis" is shown in Table \ref{tbl:P2}.
 
-\begin{table}[h!]
-\caption{Consumer, Action = Conduct Root Cause Analysis}
-\centering
-\begin{tabular}{l|c|c|c|c|c|}
-\cline{2-6}
-\multicolumn{1}{c|}{}      & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
-\multicolumn{1}{|l|}{Very Low} & 0.406    & 0.231    & 0.066   & 0.154 & 0.143    \\ \hline
-\multicolumn{1}{|l|}{Mod. Low} & 0.182    & 0.511    & 0.084   & 0.106  & 0.117       \\ \hline
-\multicolumn{1}{|l|}{Normal}   & 0.161   & 0.355  & 0.194     & 0.160   & 0.097       \\ \hline
-\multicolumn{1}{|l|}{Mod High} & 0.200  & 0.220    & 0.160     & 0.200  & 0.220       \\ \hline
-\multicolumn{1}{|l|}{Very High} & 0.214    & 0.054    & 0.125     & 0.161    & 0.446      \\ \hline
-\end{tabular}
-\label{tbl:P2}
-\end{table}
+Next, we assume the action "Conduct Root Cause Analysis" reduces the probability of transitioning to Very_Low by $100p\%$ compared to "Do Nothing" if Telemetry is Abnormal and $75p\%$ if Telemetry is Normal (i.e., root cause analysis is more likely to succeed if there is abnormal telemetry data to troublehsoot).  The change in percentage is evenly distributed among the remaining 4 states.  For example, if $p=0.1$ then the transition matrix for ``Conduct Root Cause Analysis" is shown in Table \ref{tbl:P2}.  Note that only the rows which differ from Table \ref{tbl:P1} are displayed.
+
+
+```{r}
+
+d <- 0.75
+p <- 0.1
+n <- 5
+P2 <- P1
+
+# Modify VERY_LOW, Normal Telemetry
+delta <- d * p * P1[1,1]/sum(P1[1,1:5])
+P2[1,1] <- P1[1,1] - delta
+P2[1,2] <- P1[1,2] + delta/(n-1)
+P2[1,3] <- P1[1,3] + delta/(n-1)
+P2[1,4] <- P1[1,4] + delta/(n-1)
+P2[1,5] <- P1[1,5] + delta/(n-1)
+delta <- d * p * P1[1,6]/sum(P1[1,6:10])
+P2[1,6] <- P1[1,6] - delta
+P2[1,7] <- P1[1,7] + delta/(n-1)
+P2[1,8] <- P1[1,8] + delta/(n-1)
+P2[1,9] <- P1[1,9] + delta/(n-1)
+P2[1,10] <- P1[1,10] + delta/(n-1)
+
+# Modify MOD_LOW, Normal Telemetry
+delta <- d *p * P1[2,1]/sum(P1[2,1:5])
+P2[2,1] <- P1[2,1] - delta
+P2[2,2] <- P1[2,2] + delta/(n-1)
+P2[2,3] <- P1[2,3] + delta/(n-1)
+P2[2,4] <- P1[2,4] + delta/(n-1)
+P2[2,5] <- P1[2,5] + delta/(n-1)
+delta <- d *p * P1[2,6]/sum(P1[2,6:10])
+P2[2,6] <- P1[2,6] - delta
+P2[2,7] <- P1[2,7] + delta/(n-1)
+P2[2,8] <- P1[2,8] + delta/(n-1)
+P2[2,9] <- P1[2,9] + delta/(n-1)
+P2[2,10] <- P1[2,10] + delta/(n-1)
+
+# Modify VERY_LOW, Abnormal Telemetry
+delta <- p * P1[6,1]/sum(P1[6,1:5])
+P2[6,1] <- P1[6,1] - delta
+P2[6,2] <- P1[6,2] + delta/(n-1)
+P2[6,3] <- P1[6,3] + delta/(n-1)
+P2[6,4] <- P1[6,4] + delta/(n-1)
+P2[6,5] <- P1[6,5] + delta/(n-1)
+delta <- p * P1[6,6]/sum(P1[6,6:10])
+P2[6,6] <- P1[6,6] - delta
+P2[6,7] <- P1[6,7] + delta/(n-1)
+P2[6,8] <- P1[6,8] + delta/(n-1)
+P2[6,9] <- P1[6,9] + delta/(n-1)
+P2[6,10] <- P1[6,10] + delta/(n-1)
+
+# Modify MOD_LOW, Normal Telemetry
+delta <- p * P1[7,1]/sum(P1[7,1:5])
+P2[7,1] <- P1[7,1] - delta
+P2[7,2] <- P1[7,2] + delta/(n-1)
+P2[7,3] <- P1[7,3] + delta/(n-1)
+P2[7,4] <- P1[7,4] + delta/(n-1)
+P2[7,5] <- P1[7,5] + delta/(n-1)
+delta <- p * P1[7,1]/sum(P1[7,6:10])
+P2[7,6] <- P1[7,6] - delta
+P2[7,7] <- P1[7,7] + delta/(n-1)
+P2[7,8] <- P1[7,8] + delta/(n-1)
+P2[7,9] <- P1[7,9] + delta/(n-1)
+P2[7,10] <- P1[7,10] + delta/(n-1)
+
+knitr::kable(round(P2[c(1,2,6,7),], digits=3), row.names=TRUE, caption = "Consumer, All States, Action = Root Cause Analysis \\label{tbl:P2}")
+
+```
 
 \subsection{Rewards}
 
-We assume rewards are of the form shown in Table \ref{tbl:Reward1} with a parameter $r$.
+We assume rewards are of the form shown in Tables \ref{tbl:R1} and \ref{tbl:R2} with parameters $r1$ and $r2$.
 
 \begin{table}[h!]
-\caption{Reward Matrix Template}
+\caption{Reward Matrix Templates}
 \centering
-\begin{tabular}{l|c|c|c|c|c|}
+\hspace*{\fill}
+\begin{tabular}[t]{l|c|c|c|c|c|}
 \cline{2-6}
-\multicolumn{1}{c|}{}      & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
-\multicolumn{1}{|l|}{Very Low} & -2r      & -r       & 0      & r         & 2r        \\ \hline
-\multicolumn{1}{|l|}{Mod. Low} & -2r      & -r       & 0      & r         & 2r        \\ \hline
-\multicolumn{1}{|l|}{Normal}   & -2r      & -r      & 0      & r          & 2r        \\ \hline
-\multicolumn{1}{|l|}{Mod High} & -2r      & -r      & 0      & r          & 2r        \\ \hline
-\multicolumn{1}{|l|}{Very High} & -2r      & -r     & 0      & r          & 2r        \\ \hline
+\multicolumn{1}{c|}{}      & - - & - & 0 & + & ++ \\ \hline
+\multicolumn{1}{|l|}{- -} & -2r1    & -r1    & 0   & r1 & 2r1    \\ \hline
+\multicolumn{1}{|l|}{-} & -2r1    & -r1    & 0   & r1  & 2r1       \\ \hline
+\multicolumn{1}{|l|}{0}   & -2r1   & -r1  & 0     & r1   & 2r1       \\ \hline
+\multicolumn{1}{|l|}{+} & -2r1  & -r1    & 0     & r1  & 2r1       \\ \hline
+\multicolumn{1}{|l|}{++} & -2r1    & -r1    & 0     & r1    & 2r1      \\ \hline
 \end{tabular}
-\label{tbl:Reward1}
+\hfill
+\begin{tabular}[t]{l|c|c|}
+\cline{2-3}
+\multicolumn{1}{c|}{}      & N & A  \\ \hline
+\multicolumn{1}{|l|}{N}      & 2r2 & -r2  \\ \hline
+\multicolumn{1}{|l|}{A}      & r2 & -2r2  \\ \hline
+\end{tabular}
+\hspace*{\fill}
+\label{tbl:R1}
 \end{table}
 
-Next, we assume $r=10$ and conducting a root cause analysis has cost $c=5$.  The resulting Rewards Matrices are shown in Tables \ref{tbl:Reward2} and \ref{tbl:Reward3}.
+If we assume $r1=10$, $r2=5$ and conducting a root cause analysis has cost $c=5$.  The resulting Rewards Matrices are shown in Tables \ref{tbl:Reward2} and \ref{tbl:Reward3}.
 
-\begin{table}[h!]
-\caption{Example Reward Matrix- Do Nothing}
-\centering
-\begin{tabular}{l|c|c|c|c|c|}
-\cline{2-6}
-\multicolumn{1}{c|}{}     & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
-\multicolumn{1}{|l|}{Very Low} & -20      & -10       & 0      & 10         & 20        \\ \hline
-\multicolumn{1}{|l|}{Mod. Low} & -20      & -10       & 0      & 10         & 20        \\ \hline
-\multicolumn{1}{|l|}{Normal}   & -20      & -10      & 0      & 10          & 20        \\ \hline
-\multicolumn{1}{|l|}{Mod High} & -20      & -10      & 0      & 10          & 20        \\ \hline
-\multicolumn{1}{|l|}{Very High} & -20      & -10     & 0      & 10          & 20        \\ \hline
-\end{tabular}
-\label{tbl:Reward2}
-\end{table}
-
-\begin{table}[h!]
-\caption{Example Reward Matrix- Conduct Root Cause Analysis}
-\centering
-\begin{tabular}{l|c|c|c|c|c|}
-\cline{2-6}
-\multicolumn{1}{c|}{}      & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
-\multicolumn{1}{|l|}{Very Low} & -25      & -15       & -5      & 5         & 15        \\ \hline
-\multicolumn{1}{|l|}{Mod. Low} & -25      & -15       & -5      & 5         & 15        \\ \hline
-\multicolumn{1}{|l|}{Normal}   & -      & -      & -      & -          & -        \\ \hline
-\multicolumn{1}{|l|}{Mod High} & -      & -      & -      & -          & -        \\ \hline
-\multicolumn{1}{|l|}{Very High} & -      & -     & -      & -          & -        \\ \hline
-\end{tabular}
-\label{tbl:Reward3}
-\end{table}
 
 \subsection{Result}
 
@@ -391,132 +421,6 @@ Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0
 \end{tabular}
 \label{tbl:MDP}
 \end{table}
-
-
-
-### Survey Observations
-
-NPS values are charasterized based on the industry considerations given in Section \ref{sec:statedef} denoted as $S_S \in \{++,+, 0, -, - -\}$ for \{ Very high, Moderately high, Normal, Moderately low, Very low\} respectively.  The transition probabilities are denoted as $P_{S}$ and is as given in Table.\ref{tab:consumer_dn}.
-
-```{r Preparation of sentiment matrix, echo=FALSE}
-
-n.sent = 5
-tmp <- survey.consumer.all %>%
-  group_by(SeriesName,
-           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>%
-  calcNPS()
-# Define PSI categories
-VERY_HIGH <- 60.0
-MOD_HIGH <- 45.0
-NORMAL <- 35.0
-MOD_LOW <- 8.0
-
-res <- survey.consumer.all %>%
-  group_by(SeriesName,
-           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>%
-  NPSTransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
-
-
-tmp = as.matrix(res$P,ncol = 5,nrow = 5)
-p.s = matrix(as.numeric(tmp[1:5,2:6]),ncol = 5, nrow= 5)
-rownames(p.s) = colnames(tmp)[2:6]
-colnames(p.s) = colnames(tmp)[2:6]
-# knitr::kable(res$P, row.names=TRUE, caption = "Transition matrix for consumer surveys (Monthly)")
-
-```
-
-### Telemetry
-
-Assuming a time-series of driver health is available for a particular driver, states can be defined between normal $N$ and abnormal $AN$ operations depending on a performance score $ c_t $ at time $t$ and is given in Equation.\ref{crash_rate_score}.
-\begin{equation}\label{crash_rate_score}
-c_{t} = min\left\{1,\frac{\text{\# Crashes}}{\text{Total machines }\times \text{ Percent Impacted}}\right\}
-\end{equation}
-Note that our results would be more relevant if we have access to the number of unique machines that have experienced a crash.  This is can defined as 
-$$c_t = \frac{\text{ Number of unique machines crashing at time $t$ }}{\text{Total Number of Machines Impacted at time $t$}}$$
-
-When the performance score is above a threshold, we flag the observations as Anomalous. The transition matrix for telemetry can be constructed similar to the pNPS transition matrix by observing the number of transitions from each state for a given driver update.   specific driver updates (Two states $S_T \in \{N, AN\}$) and is referred to as $P_{T}$.  For the sake of demonstration, we assume the following transition matrix for telemetry:
-
-```{r, echo=FALSE, eval=TRUE}
-
-n.tel = 2
-p.tel = matrix(c(0.75, 0.25, 0.25, 0.75),nrow = 2, ncol = 2, byrow = TRUE)
-rownames(p.tel) <- c("N","AN")
-colnames(p.tel) <- c("N","AN")
-knitr::kable(p.tel ,  caption = "A possible telemetry transtion matrix from ",  row.names = TRUE)
-
-```
-
-The final state matrix $P$ would be a combination of $P_S$ and $P_T$ given by
-
-$$P_{1}(s,t->s_1,t_1) = P_S(s)P_S(s_1)P_T(t)P_T(t_1)$$
-```{r}
-P1 = combine.telemetry.survey(number.survey.states = n.sent,
-                            number.telemetry.states = n.tel,
-                            survey.probability.matix = p.s,
-                            telemetry.probability.matix = p.tel)
-rownames(P1) <- c("++,N","+,N","0,N","-,N","- -,N","++,AN","+,AN","0,AN","-,AN","- -,AN")
-colnames(P1) <- c("++,N","+,N","0,N","-,N","- -,N","++,AN","+,AN","0,AN","-,AN","- -,AN")
-```
-
-For the assumed $P_S$ and $P_T$, the combined state matrix is given in the Appendix is Table.\ref{tab:combined_transition_matrix}.  We refer to the final state as  $\mathcal I \in \{(++,N),(+,N),(0,N),(-,N),(--,N),(++,AN),(+,AN),\\(0,AN),(-,AN),(--,AN)\}$. 
-
-## Actions
-
-The actions are chosen between performing an intervention and doing nothing.
-
-- A shift towards normal operating mode is expected in the telemetry state transition matrix associated with an intervention.  The transition matrix is denoted as $P_{T,1}$.  As the telemetry is not provided, we assume that the transition probabilities corresponding to positive and negative sentiment will increase and decrease respectively by a predefined factor $\gamma_T$.  Note that $\gamma_T$ can be estimated by observing the percentage of impacted machines due to an intervention.
-
-- A relatively small shift is expected in the sentiment transition matrix as the population is relatively late to react to improvements.  This is referred to as $P_{S,1}$.The new sentiment transition matrix can be estimated similarly by choosing the fraction by which probabilities will change.  This is denoted by $\gamma_S$. Note that $\gamma_S<\gamma_T$.
-
-
-The joint transition matrix $P_1$ is associated with the combination of $P_{S,1}$ and $P_{T,1}$. For the purpose of demonstration, we assume the transition probability of pNPS to change as described  in \ref{as_is_MDP} after a software intervention.  Assuming $p=10\%$ reduction in the transition probability of going from low to low, we have the new matrix as in Table \ref{tab:action1_prob1}.  Assuming driver updates will reduce the quantile of percentage of  of percentage of crash rates above the , we expect to observe a decrease in the crash
-
-
-## Rewards
-
-A cost $r_k$ is incurred when an intervention $k\in\{1,2\}$ is performed.  The no-action cost matrix that incentivize transitions towards higher sentiment scores are denoted by $R_{T,S,1}$.  
-
-```{r, echo= FALSE}
-R.st1 = matrix(c(140, 120, 75, 50, 30, -10, -25, -50, -100, -120,
-                 130, 110, 70, 40, 20, -15, -30, -55, -100, -120,
-                 120, 100, 65, 30, 10, -25, -35, -60, -100, -120,
-                 120, 100, 60, 20, 5, -35, -40, -65, -100, -120,
-                 120, 100, 55, 10, 0, -40 ,-45, -70, -100, -120,
-                 120, 100, 70, 45, 30, -45 ,-50, -75, -100, -120,
-                 120, 100, 65, 40, 20, -50, -55, -80, -100, -120,
-                 120, 100, 60, 35, 10, -55, -60, -85, -100, -120,
-                 120, 100, 55, 30, 5, -60, -65, -90, -110, -130,
-                 120, 100, 50, 25, 0, -65, -70, -95, -120, -140),nrow = n.sent*n.tel, ncol = n.sent*n.tel,byrow = TRUE)
-rownames(R.st1) <- c("++,N","+,N","0,N","-,N","- -,N","++,AN","+,AN","0,AN","-,AN","- -,AN")
-colnames(R.st1) <- c("++,N","+,N","0,N","-,N","- -,N","++,AN","+,AN","0,AN","-,AN","- -,AN")
-knitr::kable(R.st1 ,  caption = "A suggested no-action reward function",  row.names = TRUE)
-R.st2 = 25+R.st1
-
-```
-
-As the reward is defined based on being in the state, the reward matrix $R_{S,T,2}$ associated with an intervention can be calculated as $$R_{S,T,2}(s,t->s_1,t_1) = -r_2+R_{S,T,1}(s,t->s_1,t_1)$$ where $(s,t), (s_1,t_1)\in\mathcal I$.
-
-
-```{r}
-P2 = P1
-p <- 0.5
-n <- nrow(P1)
-delta <- p * P1 
-P2[,1] <- P1[,1] - delta[,1]
-P2[,2:(n.sent*n.tel)] =P1[, 2:(n.sent*n.tel)] + t(matrix(rep(delta[,1],each = n.sent*n.tel-1), nrow = n.sent*n.tel-1, ncol = n.sent*n.tel))/((n.sent*n.tel)-1)
-  
-knitr::kable(P2, row.names=TRUE, caption = "\\label{tab:action1_prob1} Consumer, Software Patch")
-
-R = array(c(R.st1, R.st2), c(n.tel*n.sent, n.tel*n.sent, 2))
-P = array(c(P1, P2), c(n.tel*n.sent, n.tel*n.sent, 2))
-
-rowSums(P1)
-rowSums(P2)
-
-mdp_check(P, R)
-
-```
-
 
 \section{Customer Sentiment Analysis}
 
@@ -633,3 +537,30 @@ knitr::kable(P2, row.names=TRUE, caption = "\\label{tab:action1_prob1} Consumer,
 \subsection{helper\_calcs.R}
 
 \lstinputlisting{../LenovoAnalysis/helper_calcs.R}
+
+\clearpage
+
+\section{Estimating Telemetry States}\label{app:TM}
+
+Assuming a time-series of driver health is available for a particular driver, states can be defined between normal $N$ and abnormal $AN$ operations depending on a performance score $ c_t $ at time $t$ and is given in Equation.\ref{crash_rate_score}.
+\begin{equation}\label{crash_rate_score}
+c_{t} = min\left\{1,\frac{\text{\# Crashes}}{\text{Total machines }\times \text{ Percent Impacted}}\right\}
+\end{equation}
+Note that our results would be more relevant if we have access to the number of unique machines that have experienced a crash.  This is can defined as 
+$$c_t = \frac{\text{ Number of unique machines crashing at time $t$ }}{\text{Total Number of Machines Impacted at time $t$}}$$
+
+When the performance score is above a threshold, we flag the observations as Anomalous. The transition matrix for telemetry can be constructed similar to the pNPS transition matrix by observing the number of transitions from each state for a given driver update.   specific driver updates (Two states $S_T \in \{N, AN\}$) and is referred to as $P_{T}$.  For the sake of demonstration, we assume the following transition matrix for telemetry:
+
+```{r, echo=FALSE, eval=TRUE}
+
+n.tel = 2
+p.tel = matrix(c(0.75, 0.25, 0.25, 0.75),nrow = 2, ncol = 2, byrow = TRUE)
+rownames(p.tel) <- c("N","AN")
+colnames(p.tel) <- c("N","AN")
+knitr::kable(p.tel ,  caption = "A possible telemetry transtion matrix from ",  row.names = TRUE)
+
+```
+
+The final state matrix $P$ would be a combination of $P_S$ and $P_T$ as shown in Section \ref{sec:transitions}.
+
+
