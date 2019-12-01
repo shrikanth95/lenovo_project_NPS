@@ -10,7 +10,7 @@ header-includes:
    - \usepackage{enumitem}
    - \usepackage{float}
    - \usepackage{url}
-   
+   - \usepackage{listings}
    # - \usepackage{biblatex}
    # - \addbibresource{ise560report.bib}
    - \pagenumbering{gobble}
@@ -58,19 +58,19 @@ Finally, our team analyzed the customer sentiment and comments to identify facto
 Our team considered three approaches to developing a predictive model--linear regression, proportional odds model and time series analysis--because these seemed potentially suitable for this problem and the team had previous experience with these modeling approaches.  We ultimately chose a linear model which will be described in detail here; a summary of the other methods and why we do not recommend them at this time can be found in Appendix \ref{app:PredModel}.
 
 We fit numerous linear models using combinations of the options listed below:
-\begin{enumerate}
+\begin{enumerate}[noitemsep]
   \item Epoch: raw data grouped by week, bi-monthly and monthly
   \item Segment: single segment (commercial and consumer combined) versus separate segements
   \item Predictors: Product Sentiment Index (PSI), average star rating, Product Series, Product Name and interactions between predictors
 \end{enumerate}
 
-We then evaluated each model in a two-step phase process.  First, we examined residuals plots of each model to determine if key assumptions (normality and homogeneity of variance) of a linear model were satisfied.  Aggregating data weekly or bi-monthly often meant there were very few data points per epoch and/or there would be significant outliers which meant that one or both of the key assumptions were not satisfied.  Thus it was during this phase that we determined aggreating data by month yielded beter results for fitting the linear model.  The second phase of our analysis used F-tests/Analysis of Variance (ANOVA) to identify predictors in the full model (PSI, average stars, Series and Series*PSI interaction) which did not significantly improve the model fit and thus could be removed to yield a more parsimonious model.  Detailed steps in the model selection process can also be found in Appendix \ref{app:PredModel}.  Our final recommendation is two different models for the consumer and commercial segments:
+We then evaluated each candidate model in a two-step process.  First, we examined residuals plots of each model to determine if key assumptions (e.g., normality and homogeneity of variance) of a linear model were satisfied.  Aggregating data weekly or bi-monthly often meant there were very few data points per epoch and/or there would be significant outliers which meant that one or both of the key assumptions were not satisfied.  Therefore we determined aggreating data by month yielded beter results for fitting the linear model.  The second phase of our analysis used F-tests/Analysis of Variance (ANOVA) to identify predictors in the full model (PSI, average stars, Series and Series*PSI interaction) which did not significantly improve the model fit and thus could be removed to yield a more parsimonious model.  Detailed steps in the model selection process can also be found in Appendix \ref{app:PredModel}.  Our final recommendation is two different models for the consumer and commercial segments:
 
 ```{r echo=FALSE, results='hide', message=FALSE, warning=FALSE}
 rm(list=ls())
 
 knitr::opts_chunk$set(echo = FALSE)
-#knitr::opts_chunk$set(out.width="50%")
+knitr::opts_chunk$set(out.width="75%")
 knitr::opts_chunk$set(fig.align = "center")
 knitr::opts_chunk$set(message = FALSE)
 knitr::opts_chunk$set(warning = FALSE)
@@ -82,6 +82,7 @@ library(grid)
 library(gridExtra)
 # library(kableExtra)
 library(tidyverse)
+#library(kableExtra)
 library(car)
 library(caret)
 
@@ -124,11 +125,6 @@ mdl2 <- train(nps ~ SeriesName + psi + stars, data=all_consumer,
               method = "lm", trControl = train.control)
 ```
 
-$$NPS_{consumer} = (2.43 + \beta_1) - 0.16 * PSI + 13.42 * stars$$
-$$NPS_{commercial} = (38.87 + \beta_1) + (\beta_2 - 0.49) * PSI$$
-
-where $\beta_i$ is unique for each Series in each segment as shown in the tables below:
-
 ```{r}
 # Commercial Only
 psi <- sentiment.comm.all %>%
@@ -156,27 +152,12 @@ mdl4 <- train(nps ~ SeriesName*psi, data=all_comm,
               method = "lm", trControl = train.control)
 ```
 
-```{r}
-# Consumer
-beta_coeff <- round(mdl2$finalModel$coefficients[2:14], digits=2)
-nconsumer <- sub("SeriesName", "", names(beta_coeff))
-knitr::kable(data.frame(nconsumer, unname(beta_coeff)),
-             col.names = c("Consumer Series", "$\\beta_1$"),
-             caption = "Coefficients for Consumer Model") 
+$$NPS_{consumer} = (2.43 + \beta_1) - 0.16 * PSI + 13.42 * stars$$
+$$NPS_{commercial} = (38.87 + \beta_1) + (\beta_2 - 0.49) * PSI$$
 
-# Commercial
-beta_coeff1 <- round(mdl4$finalModel$coefficients[2:12], digits=2)
-beta_coeff2 <- round(mdl4$finalModel$coefficients[14:24], digits=2)
-ncomm <- sub("SeriesName", "", names(beta_coeff1))
-knitr::kable(data.frame(ncomm, unname(beta_coeff1), unname(beta_coeff2)), 
-             col.names = c("Commercial Series", "$\\beta_1$", "$\\beta_2$"),
-             caption = "Coefficients for Commercial Model") 
+where the $\beta_i$ are listed in Appendix \ref{app:coeff} due to the large number of catgeories in Series.
 
-```
-
-TO DO: Figure out how to place tables side by side or if space is tight move to Appendix A
-
-After model selection, we used k-fold cross validation to estimate the accuracy of the model for future predictions. While the model selection process did result in statistically significant coefficients for PSI and stars, the results from the k-fold cross validation show that both model still leave significant room for improvement based on the Root Mean Square Error and Mean Absolute Error (Table \ref{tbl:KFold}).
+After model selection, we used k-fold cross validation to estimate the prediction performance of the selected models. Although the model selection process did result in statistically significant coefficients for PSI and stars, the results from the k-fold cross validation show that both models still leave significant room for improvement based on the Root Mean Square Error and Mean Absolute Error (Table \ref{tbl:KFold}).
 
 \begin{table}[ht]
 \centering
@@ -190,11 +171,11 @@ After model selection, we used k-fold cross validation to estimate the accuracy 
 \label{tbl:KFold}
 \end{table}
 
-It is perhaps easier to understand these results by comparing plots of observed versus predicted.  Figures \ref{fig:mdlConsumer} and \ref{fig:mdlComm} are scatterplots for the Consumer and Commercial data, respectively.  In both sets of plots, the grey points are the observed (NPS, PSI) scores, the grey line is the regression line for the marginal model $NPS = \beta_o + \beta_1 * PSI$ and the red dots are the _predicted values_ from equations (1) and (2) respectively.  One can clearly see that while the predicted (red) points follow the general trend of the observed (grey) points, there is still significant variation that is not accounted for by the models.  If Lenovo started archiving the telemetry data, then new models incorporating the telemetry could be fit once several months of data is available; it is entirely possible incorporating telemetry data into the model could reduce the unaccounted for variation and give better predictions.
+It is perhaps easier to understand these results by comparing plots of observed versus predicted.  Figures \ref{fig:mdlConsumer} and \ref{fig:mdlComm} are scatterplots for the Consumer and Commercial data, respectively.  In both sets of plots, the grey points are the observed (NPS, PSI) scores, the grey line is the regression line for the marginal model $NPS = \beta_o + \beta_1 * PSI$ and the red dots are the _predicted values_ from equations (1) and (2) respectively.  While the predicted (red) points follow the general trend of the observed (grey) points, there is still significant variation that is not accounted for by the models.  If Lenovo started archiving the telemetry data, then new models incorporating the telemetry could be fit once several months of data is available; it is entirely possible incorporating telemetry data into the model could reduce the unaccounted for variation and give better predictions.
 
 TO DO: Number equations for linear models
 
-```{r fig.cap="\\label{fig:mdlConsumer}Marginal Model Plots, Consumer NPS vs. PSI", fig.pos="H"}
+```{r fig.cap="\\label{fig:mdlConsumer}Marginal Model Plots, Consumer NPS vs. PSI"}
 # Look at scatterplots fitted vs actual
 
 cbind(all_consumer, 
@@ -206,7 +187,7 @@ ggplot(aes(x=psi, y=nps, group=SeriesName)) +
   facet_wrap(~SeriesName)
 ```
 
-```{r fig.cap="\\label{fig:mdlComm}Marginal Model Plots, Commercial NPS vs. PSI", fig.pos="H"}
+```{r fig.cap="\\label{fig:mdlComm}Marginal Model Plots, Commercial NPS vs. PSI"}
 # Look at scatterplots fitted vs actual
 
 cbind(all_comm, 
@@ -220,67 +201,141 @@ ggplot(aes(x=psi, y=nps, group=SeriesName)) +
 
 \section{Markov Decision Process}
 
-The next phase of our analysis was to develop a Markov decision process (MDP) to identify optimal policies based on customer sentiment or satisfaction.  Where Lenovo did not identify specific componenents (e.g., actions, rewards) necessary for the MDP, we will make assumptions and identify them as such.  As much as possible, we parameterized the assumptions so that Lenovo can easily modify our software to their specifications in the future.
+The next phase of our analysis developed a Markov decision process (MDP) to identify optimal policies based on customer sentiment or satisfaction.  Where Lenovo did not identify specific componenents (e.g., actions, rewards) necessary for the MDP, we will make assumptions and identify them as such.
 
 \subsection{States}\label{sec:statedef}
 
-We considered using either PSI or predicted NPS (pNPS) states as the basis for the MDP.  The challenge with using PSI is that choosing states is somewhat arbitrary.  We considered standardizing the PSI scores and then delineating states using multiples of the standard deviation.  However, we felt that approach would not be as intuitive to understand because the states would not be defined according to the [-100, 100] scale Lenovo is familiar with for PSI.  On the other hand, there are established industry-standard categories for NPS\cite{Nps19}.  We chose to use these industry-standards as the basis for the pNPS states in our MDP, and they are listed below.
+We considered using either PSI or predicted NPS  states as the basis for the MDP.  The challenge with using PSI is that defining states is somewhat arbitrary.  We considered standardizing the PSI scores and then delineating states using multiples of the standard deviation.  However, we felt that approach would not be as intuitive to understand because the states would not be defined according to the [-100, 100] scale Lenovo is familiar with for PSI.  On the other hand, there are established industry-standard categories for NPS\cite{Nps19}.  Therefore, we chose to use these industry-standards as the basis for the predicted NPS states in our MDP, and they are listed below.
 
-\begin{itemize}
-  \item Very Low: $pNPS \le 8$
-  \item Moderately Low: $8 < pNPS \le 35$
-  \item Normal: $35 < pNPS \le 45$
-  \item Moderately High: $45 < pNPS \le 65$
-  \item Very High: $65 < pNPS$
+\begin{itemize}[noitemsep]
+  \item Very Low: $NPS \le 8$
+  \item Moderately Low: $8 < NPS \le 35$
+  \item Normal: $35 < NPS \le 45$
+  \item Moderately High: $45 < NPS \le 65$
+  \item Very High: $65 < NPS$
 \end{itemize}
 
 \subsection{Actions}
 
-We assumed two possible actions: {Do Nothing, Conduct Root Cause Analysis}
-
-<!-- \begin{table}[h!] -->
-<!-- \begin{tabular}{lc|c|c|c|c|c|} -->
-<!-- \cline{3-7} -->
-<!-- \multicolumn{1}{c}{}     &                & \multicolumn{5}{c|}{Applicable NPS States}  \\ \hline -->
-<!-- \multicolumn{1}{|c|}{ID} & Action         & Very Low & \begin{tabular}[c]{@{}c@{}}Moderately\\ Low\end{tabular} & Normal & \begin{tabular}[c]{@{}c@{}}Moderately \\ High\end{tabular} & Very High \\ \hline -->
-<!-- \multicolumn{1}{|l|}{1}  & Do Nothing                  & Y  & Y & N      & N  & N      \\ \hline -->
-<!-- \multicolumn{1}{|l|}{2}  & Conduct root cause analysis & Y  & Y & N      & N  & N       \\ \hline -->
-<!-- \end{tabular} -->
-<!-- \end{table} -->
+We assume two possible actions: {Do Nothing, Conduct Root Cause Analysis}
 
 \begin{table}[h!]
+\centering
+\caption{Example Actions}
 \begin{tabular}{lc|c|c|c|c|c|}
 \cline{3-7}
 \multicolumn{1}{c}{}     &                & \multicolumn{5}{c|}{Applicable NPS States}  \\ \hline
-\multicolumn{1}{|c|}{ID} & Action         & Very Low & Moderately Low & Normal & Moderately High & Very High \\ \hline
-\multicolumn{1}{|l|}{1}  & Do Nothing                  & Y  & Y & N      & N  & N      \\ \hline
-\multicolumn{1}{|l|}{2}  & Conduct root cause analysis & Y  & Y & N      & N  & N       \\ \hline
+\multicolumn{1}{|c|}{ID} & Action         & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
+\multicolumn{1}{|l|}{1}  & Do Nothing                  & Y  & Y & Y      & Y  & Y      \\ \hline
+\multicolumn{1}{|l|}{2}  & Conduct Root Cause Analysis & Y  & Y & N      & N  & N       \\ \hline
 \end{tabular}
 \end{table}
 
 \subsection{Transitions}
 
-Using the above NPS states, we then calculated the natural evolution of NPS by month (i.e., same epoch as linear model).  This natural evolution is equivalent to
+Using the above NPS states, we then calculated the natural evolution of NPS by month (i.e., same epoch as linear model).  This natural evolution is equivalent to the "Do Nothing" Action.
 
-```{r} 
-# Define NPS states
-NPS_VERY_HIGH <- 60.0
-NPS_MOD_HIGH <- 45.0
-NPS_NORMAL <- 35.0
-NPS_MOD_LOW <- 8.0
+\begin{table}[h!]
+\caption{Consumer, Action = Do Nothing}
+\centering
+\begin{tabular}{l|c|c|c|c|c|}
+\cline{2-6}
+\multicolumn{1}{c|}{}      & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
+\multicolumn{1}{|l|}{Very Low} & 0.451    & 0.220    & 0.055   & 0.143 & 0.132    \\ \hline
+\multicolumn{1}{|l|}{Mod. Low} & 0202    & 0.506    & 0.079   & 0.101  & 0.111       \\ \hline
+\multicolumn{1}{|l|}{Normal}   & 0.161   & 0.355  & 0.194     & 0.160   & 0.097       \\ \hline
+\multicolumn{1}{|l|}{Mod High} & 0.200  & 0.220    & 0.160     & 0.200  & 0.220       \\ \hline
+\multicolumn{1}{|l|}{Very High} & 0.214    & 0.054    & 0.125     & 0.161    & 0.446      \\ \hline
+\end{tabular}
+\label{tbl:P1}
+\end{table}
 
-res <- survey.consumer.all %>%
-  group_by(SeriesName,
-           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>%
-  NPSTransitions(NPS_VERY_HIGH, NPS_MOD_HIGH, NPS_NORMAL, NPS_MOD_LOW)
+Next, we assume the action "Conduct Root Cause Analysis" reduces the probability of transitioning to Very_Low by $100p\%$ as compared to "Do Nothing", and that percentage is evenly distributed among the remaining 4 states.  For example, if $p=0.1$ then the transition matrix for ``Conduct Root Cause Analysis" is shown in Table \ref{tbl:P2}.
 
-PConsumer_A1 <- res$P
-
-knitr::kable(PConsumer_A1, row.names=TRUE, caption = "\\label{tab:consumer_dn} Consumer, Do Nothing")
-
-```
+\begin{table}[h!]
+\caption{Consumer, Action = Conduct Root Cause Analysis}
+\centering
+\begin{tabular}{l|c|c|c|c|c|}
+\cline{2-6}
+\multicolumn{1}{c|}{}      & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
+\multicolumn{1}{|l|}{Very Low} & 0.406    & 0.231    & 0.066   & 0.154 & 0.143    \\ \hline
+\multicolumn{1}{|l|}{Mod. Low} & 0.182    & 0.511    & 0.084   & 0.106  & 0.117       \\ \hline
+\multicolumn{1}{|l|}{Normal}   & 0.161   & 0.355  & 0.194     & 0.160   & 0.097       \\ \hline
+\multicolumn{1}{|l|}{Mod High} & 0.200  & 0.220    & 0.160     & 0.200  & 0.220       \\ \hline
+\multicolumn{1}{|l|}{Very High} & 0.214    & 0.054    & 0.125     & 0.161    & 0.446      \\ \hline
+\end{tabular}
+\label{tbl:P2}
+\end{table}
 
 \subsection{Rewards}
+
+We assume rewards are of the form shown in Table \ref{tbl:Reward1} with a parameter $r$.
+
+\begin{table}[h!]
+\caption{Reward Matrix Template}
+\centering
+\begin{tabular}{l|c|c|c|c|c|}
+\cline{2-6}
+\multicolumn{1}{c|}{}      & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
+\multicolumn{1}{|l|}{Very Low} & -2r      & -r       & 0      & r         & 2r        \\ \hline
+\multicolumn{1}{|l|}{Mod. Low} & -2r      & -r       & 0      & r         & 2r        \\ \hline
+\multicolumn{1}{|l|}{Normal}   & -2r      & -r      & 0      & r          & 2r        \\ \hline
+\multicolumn{1}{|l|}{Mod High} & -2r      & -r      & 0      & r          & 2r        \\ \hline
+\multicolumn{1}{|l|}{Very High} & -2r      & -r     & 0      & r          & 2r        \\ \hline
+\end{tabular}
+\label{tbl:Reward1}
+\end{table}
+
+Next, we assume $r=10$ and conducting a root cause analysis has cost $c=5$.  The resulting Rewards Matrices are shown in Tables \ref{tbl:Reward2} and \ref{tbl:Reward3}.
+
+\begin{table}[h!]
+\caption{Example Reward Matrix- Do Nothing}
+\centering
+\begin{tabular}{l|c|c|c|c|c|}
+\cline{2-6}
+\multicolumn{1}{c|}{}     & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
+\multicolumn{1}{|l|}{Very Low} & -20      & -10       & 0      & 10         & 20        \\ \hline
+\multicolumn{1}{|l|}{Mod. Low} & -20      & -10       & 0      & 10         & 20        \\ \hline
+\multicolumn{1}{|l|}{Normal}   & -20      & -10      & 0      & 10          & 20        \\ \hline
+\multicolumn{1}{|l|}{Mod High} & -20      & -10      & 0      & 10          & 20        \\ \hline
+\multicolumn{1}{|l|}{Very High} & -20      & -10     & 0      & 10          & 20        \\ \hline
+\end{tabular}
+\label{tbl:Reward2}
+\end{table}
+
+\begin{table}[h!]
+\caption{Example Reward Matrix- Conduct Root Cause Analysis}
+\centering
+\begin{tabular}{l|c|c|c|c|c|}
+\cline{2-6}
+\multicolumn{1}{c|}{}      & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
+\multicolumn{1}{|l|}{Very Low} & -25      & -15       & -5      & 5         & 15        \\ \hline
+\multicolumn{1}{|l|}{Mod. Low} & -25      & -15       & -5      & 5         & 15        \\ \hline
+\multicolumn{1}{|l|}{Normal}   & -      & -      & -      & -          & -        \\ \hline
+\multicolumn{1}{|l|}{Mod High} & -      & -      & -      & -          & -        \\ \hline
+\multicolumn{1}{|l|}{Very High} & -      & -     & -      & -          & -        \\ \hline
+\end{tabular}
+\label{tbl:Reward3}
+\end{table}
+
+\subsection{Result}
+
+Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]$ and a discount factor of $0.95$.  The results are listed in Table \ref{tbl:MDP}.  Conducting the root cause analysis is optimal _only_ if the NPS score is Very Low _and_ it is expected to reduce the probability of staying in the Very_Low state by 40% or more.  For all other conditions and states, the optimal policy is Do Nothing.   The R source code used to conduct this analysis is listed in Appendix \ref{app:MDP} and the values for reward, cost, discount factor and $p$ are parameters which can be easily modified by Lenovo.
+
+\begin{table}[h!]
+\caption{Optimal Policy as a Function of p}
+\centering
+\begin{tabular}{l|c|c|}
+\cline{2-3}
+\multicolumn{1}{c|}{}      & $p<0.4$ & $p \ge 0.4$ \\ \hline
+\multicolumn{1}{|l|}{Very Low}      & Do Nothing & Root Cause Analysis \\ \hline
+\multicolumn{1}{|l|}{Mod. Low}      & Do Nothing & Do Nothing \\ \hline
+\multicolumn{1}{|l|}{Normal}      & Do Nothing & Do Nothing \\ \hline
+\multicolumn{1}{|l|}{Mod. High}      & Do Nothing & Do Nothing \\ \hline
+\multicolumn{1}{|l|}{Very High}      & Do Nothing & Do Nothing \\ \hline
+\end{tabular}
+\label{tbl:MDP}
+\end{table}
 
 \subsection{Future MDP}
 
@@ -430,6 +485,29 @@ Our recommendations are as follows:
 
 \appendix
 
+\section{Coefficients for Recommended Linear Models}\label{app:coeff}
+
+
+```{r}
+# Consumer
+beta_coeff <- round(mdl2$finalModel$coefficients[2:14], digits=2)
+nconsumer <- sub("SeriesName", "", names(beta_coeff))
+knitr::kable(data.frame(nconsumer, unname(beta_coeff)),
+             col.names = c("Consumer Series", "$\\beta_1$"),
+             caption = "Coefficients for Consumer Model") 
+
+# Commercial
+beta_coeff1 <- round(mdl4$finalModel$coefficients[2:12], digits=2)
+beta_coeff2 <- round(mdl4$finalModel$coefficients[14:24], digits=2)
+ncomm <- sub("SeriesName", "", names(beta_coeff1))
+knitr::kable(data.frame(ncomm, unname(beta_coeff1), unname(beta_coeff2)), 
+             col.names = c("Commercial Series", "$\\beta_1$", "$\\beta_2$"),
+             caption = "Coefficients for Commercial Model") 
+
+```
+
+\clearpage
+
 \section{Predictive Model Approaches}\label{app:PredModel}
 
 \subsection{Linear Model}
@@ -490,3 +568,20 @@ knitr::kable(P2, row.names=TRUE, caption = "\\label{tab:action1_prob1} Consumer,
 
 ```
 
+\clearpage
+
+\section{MDP Source Code}\label{app:MDP}
+
+\lstinputlisting{../LenovoAnalysis/MDP_final.R}
+
+\clearpage
+
+\section{Additional R code}
+
+\subsection{data\_prep.R}
+
+\lstinputlisting{../LenovoAnalysis/data_prep.R}
+
+\subsection{helper\_calcs.R}
+
+\lstinputlisting{../LenovoAnalysis/helper_calcs.R}
