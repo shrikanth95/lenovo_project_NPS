@@ -62,10 +62,12 @@ PSITransitions <- function(df, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
                                (VERY_HIGH < psi) ~ "VERY_HIGH")) %>%
     mutate(next_psi_cat = lead(psi_cat, 1))
   
-  data.psi$psi_cat <- factor(data.psi$psi_cat, levels=c("VERY_LOW", "MOD_LOW", "NORMAL",
-                                                        "MOD_HIGH", "VERY_HIGH"))
-  data.psi$next_psi_cat <- factor(data.psi$next_psi_cat, levels=c("VERY_LOW", "MOD_LOW", "NORMAL",
-                                                        "MOD_HIGH", "VERY_HIGH"))
+  data.psi$psi_cat <- factor(data.psi$psi_cat, 
+                             levels=c("VERY_LOW", "MOD_LOW", "NORMAL",
+                                      "MOD_HIGH", "VERY_HIGH"))
+  data.psi$next_psi_cat <- factor(data.psi$next_psi_cat, 
+                                  levels=c("VERY_LOW", "MOD_LOW", "NORMAL",
+                                            "MOD_HIGH", "VERY_HIGH"))
   
   counts <- data.psi %>%
     ungroup() %>%
@@ -100,7 +102,8 @@ NPSTransitions <- function(df, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
   
   data.nps <- df %>%
     calcNPS() %>%
-    mutate(nps_cat = case_when((nps <= MOD_LOW) ~ "VERY_LOW",
+    mutate(nps_cat = 
+             case_when((nps <= MOD_LOW) ~ "VERY_LOW",
                                (MOD_LOW < nps & nps <= NORMAL) ~ "MOD_LOW",
                                (NORMAL < nps & nps <= MOD_HIGH) ~ "NORMAL",
                                (MOD_HIGH < nps & nps <= VERY_HIGH) ~ "MOD_HIGH",
@@ -109,11 +112,13 @@ NPSTransitions <- function(df, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
   
   n <- length(data.nps$nps)
   
-  data.nps$nps_cat <- factor(data.nps$nps_cat, levels=c("VERY_LOW", "MOD_LOW", "NORMAL",
-                                                        "MOD_HIGH", "VERY_HIGH"))
+  data.nps$nps_cat <- factor(data.nps$nps_cat, 
+                             levels=c("VERY_LOW", "MOD_LOW", "NORMAL",
+                                      "MOD_HIGH", "VERY_HIGH"))
   
-  data.nps$next_nps_cat <- factor(data.nps$next_nps_cat, levels=c("VERY_LOW", "MOD_LOW", "NORMAL",
-                                                        "MOD_HIGH", "VERY_HIGH"))
+  data.nps$next_nps_cat <- factor(data.nps$next_nps_cat, 
+                                  levels=c("VERY_LOW", "MOD_LOW", "NORMAL",
+                                           "MOD_HIGH", "VERY_HIGH"))
   
   counts <- data.nps %>%
     ungroup() %>%
@@ -126,7 +131,7 @@ NPSTransitions <- function(df, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
   ncol <- dim(counts)[2]
   total <- rowSums(counts[,2:ncol])
   P <- counts
-  P[,2:ncol] <- counts[,2:ncol] / total
+  P[,2:ncol] <- round(counts[,2:ncol] / total, digits=3)
   counts$total = total
   
   list(P = P,

@@ -10,6 +10,7 @@ header-includes:
    - \usepackage{enumitem}
    - \usepackage{float}
    - \usepackage{url}
+   - \usepackage{listings}
    # - \usepackage{biblatex}
    # - \addbibresource{ise560report.bib}
    - \pagenumbering{gobble}
@@ -63,7 +64,7 @@ We fit numerous linear models using combinations of the options listed below:
   \item Predictors: Product Sentiment Index (PSI), average star rating, Product Series, Product Name and interactions between predictors
 \end{enumerate}
 
-We then evaluated each model in a two-step phase process.  First, we examined residuals plots of each model to determine if key assumptions (normality and homogeneity of variance) of a linear model were satisfied.  Aggregating data weekly or bi-monthly often meant there were very few data points per epoch and/or there would be significant outliers which meant that one or both of the key assumptions were not satisfied.  Thus it was during this phase that we determined aggreating data by month yielded beter results for fitting the linear model.  The second phase of our analysis used F-tests/Analysis of Variance (ANOVA) to identify predictors in the full model (PSI, average stars, Series and Series*PSI interaction) which did not significantly improve the model fit and thus could be removed to yield a more parsimonious model.  Detailed steps in the model selection process can also be found in Appendix \ref{app:PredModel}.  Our final recommendation is two different models for the consumer and commercial segments:
+We then evaluated each model in a two-step process.  First, we examined residuals plots of each model to determine if key assumptions (e.g., normality and homogeneity of variance) of a linear model were satisfied.  Aggregating data weekly or bi-monthly often meant there were very few data points per epoch and/or there would be significant outliers which meant that one or both of the key assumptions were not satisfied.  Therefore we determined aggreating data by month yielded beter results for fitting the linear model.  The second phase of our analysis used F-tests/Analysis of Variance (ANOVA) to identify predictors in the full model (PSI, average stars, Series and Series*PSI interaction) which did not significantly improve the model fit and thus could be removed to yield a more parsimonious model.  Detailed steps in the model selection process can also be found in Appendix \ref{app:PredModel}.  Our final recommendation is two different models for the consumer and commercial segments:
 
 ```{r echo=FALSE, results='hide', message=FALSE, warning=FALSE}
 rm(list=ls())
@@ -80,7 +81,6 @@ library(lubridate)
 library(grid)
 library(gridExtra)
 #library(kableExtra)
-library(tidyverse)
 library(car)
 library(caret)
 
@@ -545,7 +545,25 @@ plt.con
 \section{Markov Decision Process}
 
 
-```{r}
+```{r echo=FALSE}
+rm(list=ls())
+
+library(tidyverse)
+library(lubridate)
+library(grid)
+library(gridExtra)
+library(MDPtoolbox)
+
+source("../src_lenovo_project.R")
+source("../LenovoAnalysis/data_prep.R")
+source("../LenovoAnalysis/helper_calcs.R")
+source('../LenovoAnalysis/MDP_lenovo_helper.R', encoding = 'UTF-8')
+filter_raw_data()
+
+load("../CleanData/filtered_sentiment_data.Rdata")
+load("../CleanData/filtered_survey_data.Rdata")
+load("../CleanData/filtered_product_lists.Rdata")
+load("../CleanData/timeSeries.Rdata")
 
 # Define NPS states
 NPS_VERY_HIGH <- 60.0
@@ -585,3 +603,16 @@ PConsumer_A2[2,6] <- PConsumer_A2[2,6] + delta/(n-1)
 #knitr::kable(PConsumer_A2, row.names=TRUE, caption = "Consumer, Action=Root Cause Analysis")
 
 ```
+
+
+\clearpage
+
+\section{Additional R code}
+
+\subsection{data\_prep.R}
+
+\lstinputlisting{../LenovoAnalysis/data_prep.R}
+
+\subsection{helper\_calcs.R}
+
+\lstinputlisting{../LenovoAnalysis/helper_calcs.R}
