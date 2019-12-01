@@ -131,7 +131,7 @@ NPSTransitions <- function(df, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
   ncol <- dim(counts)[2]
   total <- rowSums(counts[,2:ncol])
   P <- counts
-  P[,2:ncol] <- round(counts[,2:ncol] / total, digits=3)
+  P[,2:ncol] <- counts[,2:ncol] / total
   counts$total = total
   
   list(P = P,
