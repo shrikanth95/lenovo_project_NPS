@@ -239,7 +239,7 @@ We assume two possible actions: {Do Nothing, Conduct Root Cause Analysis}.  Furt
 
 We calculated the natural evolution of NPS by month (i.e., same epoch as linear model) from the survey data.  Since we do not have enough data to calculate the natural evolution of Telemetry states, we will assume a transition matrix as shown below.
 
-\begin{table}[h!]
+\begin{table}[h]
 \caption{Individual Transition Matrices, NPS and Telemetry}
 \centering
 \hspace*{\fill}
@@ -301,7 +301,7 @@ knitr::kable(round(P1, digits=3), row.names=TRUE, caption = "Consumer, All State
 
 ```
 
-
+\newpage
 Next, we assume the action "Conduct Root Cause Analysis" reduces the probability of transitioning to Very_Low by $100p\%$ compared to "Do Nothing" if Telemetry is Abnormal and $75p\%$ if Telemetry is Normal (i.e., root cause analysis is more likely to succeed if there is abnormal telemetry data to troublehsoot).  The change in percentage is evenly distributed among the remaining 4 states.  For example, if $p=0.1$ then the transition matrix for ``Conduct Root Cause Analysis" is shown in Table \ref{tbl:P2}.  Note that only the rows which differ from Table \ref{tbl:P1} are displayed.
 
 
@@ -368,7 +368,8 @@ P2[7,8] <- P1[7,8] + delta/(n-1)
 P2[7,9] <- P1[7,9] + delta/(n-1)
 P2[7,10] <- P1[7,10] + delta/(n-1)
 
-knitr::kable(round(P2[c(1,2,6,7),], digits=3), row.names=TRUE, caption = "Consumer, All States, Action = Root Cause Analysis \\label{tbl:P2}")
+knitr::kable(round(P2[c(1,2,6,7),], digits=3), row.names=TRUE, 
+             caption = "Consumer, All States, Action = Root Cause Analysis \\label{tbl:P2}")
 
 ```
 
