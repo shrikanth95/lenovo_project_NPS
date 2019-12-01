@@ -55,11 +55,12 @@ PSITransitions <- function(df, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
   
   data.psi <- df %>%
     calcPSI() %>%
-    mutate(psi_cat = case_when((psi <= MOD_LOW) ~ "VERY_LOW",
-                               (MOD_LOW < psi & psi <= NORMAL) ~ "MOD_LOW",
-                               (NORMAL < psi & psi <= MOD_HIGH) ~ "NORMAL",
-                               (MOD_HIGH < psi & psi <= VERY_HIGH) ~ "MOD_HIGH",
-                               (VERY_HIGH < psi) ~ "VERY_HIGH")) %>%
+    mutate(psi_cat = 
+             case_when((psi <= MOD_LOW) ~ "VERY_LOW",
+                       (MOD_LOW < psi & psi <= NORMAL) ~ "MOD_LOW",
+                       (NORMAL < psi & psi <= MOD_HIGH) ~ "NORMAL",
+                       (MOD_HIGH < psi & psi <= VERY_HIGH) ~ "MOD_HIGH",
+                       (VERY_HIGH < psi) ~ "VERY_HIGH")) %>%
     mutate(next_psi_cat = lead(psi_cat, 1))
   
   data.psi$psi_cat <- factor(data.psi$psi_cat, 
@@ -104,10 +105,10 @@ NPSTransitions <- function(df, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
     calcNPS() %>%
     mutate(nps_cat = 
              case_when((nps <= MOD_LOW) ~ "VERY_LOW",
-                               (MOD_LOW < nps & nps <= NORMAL) ~ "MOD_LOW",
-                               (NORMAL < nps & nps <= MOD_HIGH) ~ "NORMAL",
-                               (MOD_HIGH < nps & nps <= VERY_HIGH) ~ "MOD_HIGH",
-                               (VERY_HIGH < nps) ~ "VERY_HIGH")) %>%
+                       (MOD_LOW < nps & nps <= NORMAL) ~ "MOD_LOW",
+                       (NORMAL < nps & nps <= MOD_HIGH) ~ "NORMAL",
+                       (MOD_HIGH < nps & nps <= VERY_HIGH) ~ "MOD_HIGH",
+                       (VERY_HIGH < nps) ~ "VERY_HIGH")) %>%
     mutate(next_nps_cat = lead(nps_cat, 1))
   
   n <- length(data.nps$nps)
