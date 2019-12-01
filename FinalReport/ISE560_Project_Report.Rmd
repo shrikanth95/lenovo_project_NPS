@@ -221,7 +221,7 @@ ggplot(aes(x=psi, y=nps, group=SeriesName)) +
 
 The next phase of our analysis was to develop a Markov decision process (MDP) to identify optimal policies based on customer sentiment or satisfaction.  Where Lenovo did not identify specific componenents (e.g., actions, rewards) necessary for the MDP, we will make assumptions and identify them as such.  As much as possible, we parameterized the assumptions so that Lenovo can easily modify our software to their specifications in the future.
 
-\subsection{States}
+\subsection{States}\label{sec:statedef}
 
 We considered using either PSI or predicted NPS (pNPS) states as the basis for the MDP.  The challenge with using PSI is that choosing states is somewhat arbitrary.  We considered standardizing the PSI scores and then delineating states using multiples of the standard deviation.  However, we felt that approach would not be as intuitive to understand because the states would not be defined according to the [-100, 100] scale Lenovo is familiar with for PSI.  On the other hand, there are established industry-standard categories for NPS\cite{Nps19}.  We chose to use these industry-standards as the basis for the pNPS states in our MDP, and they are listed below.
 
@@ -292,20 +292,20 @@ We consider the combination of telemetry and user survey as our states. We prese
 
 ### Survey Observations
 
-NPS values are charasterised based on the industry considerations given in Table \ref{tab:NPS_table} five 20\% quantiles denoted as $S_S \in \{++,+, 0, -, - -\}$) and is referred to as $P_{S}$ where:
+NPS values are charasterized based on the industry considerations given in Section \ref{sec:statedef} five 20\% quantiles denoted as $S_S \in \{++,+, 0, -, - -\}$)  and is referred to as $P_{S}$ 
 
-  - ++: PSI above 65
+  - ++
   - +: PSI between 60 and 65
   - 0: PSI between 45 and 60
-  - -: PSI between 42 and 45
-  - - -: PSI below 42
+  - - : PSI between 42 and 45
+  - - - : PSI below 42
 
 ```{r Preparation of sentiment matrix, echo=FALSE}
 
 n.sent = 5
 tmp <- survey.consumer.all %>%
-  group_by(#ProductName,
-           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "1 day")) %>%
+  group_by(SeriesName,
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>%
   calcNPS()
 # Define PSI categories
 VERY_HIGH <- 60.0
@@ -314,8 +314,8 @@ NORMAL <- 35.0
 MOD_LOW <- 8.0
 
 res <- survey.consumer.all %>%
-  group_by(#ProductName,
-           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "1 day")) %>%
+  group_by(SeriesName,
+           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>%
   NPSTransitions(VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
 
 
@@ -323,10 +323,9 @@ tmp = as.matrix(res$P,ncol = 5,nrow = 5)
 p.s = matrix(as.numeric(tmp[1:5,2:6]),ncol = 5, nrow= 5) %>% round(digits = 3)
 rownames(p.s) = colnames(tmp)[2:6]
 colnames(p.s) = colnames(tmp)[2:6]
-knitr::kable(res$P, row.names=TRUE, caption = "Transition matrix for consumer surveys (weekly)")
+knitr::kable(res$P, row.names=TRUE, caption = "Transition matrix for consumer surveys (Monthly)")
 
 ```
-
 
 ### Telemetry
 
@@ -337,10 +336,6 @@ An example of how the telemetry is used is as follows.
 ```{r, echo=FALSE}
 
 telemetry.con <- read.csv("../RawData/Driver_Health_consumer_ideapad.csv", header = TRUE)
-
-# TO DO:  I think there's a cut & paste typo because filename below is identical to one above
-telemetry.comm <- read.csv("../RawData/Driver_Health_consumer_ideapad.csv", header = TRUE)
-
 telemetry.con <- telemetry.con %>% mutate(Driver.Name = as.character(Driver.Name),
                                           Crashes = as.numeric(Crashes),
                                           Percent.Impacted = as.numeric(sub("%", "",Percent.Impacted)),
@@ -383,8 +378,7 @@ P1 = combine.telemetry.survey(number.survey.states = n.sent,
 P1 <- round(P1,digits = 3)
 rownames(P1) <- c("++,N","+,N","0,N","-,N","- -,N","++,AN","+,AN","0,AN","-,AN","- -,AN")
 colnames(P1) <- c("++,N","+,N","0,N","-,N","- -,N","++,AN","+,AN","0,AN","-,AN","- -,AN")
-knitr::kable(P1 ,  caption = "A combined Telemetry-Sentiment State transition matrix.",
-             row.names = TRUE)
+knitr::kable(P1 ,  caption = "A combined Telemetry-Sentiment State transition matrix.", row.names = TRUE)
 
 
 ```
