@@ -80,7 +80,7 @@ library(tidyverse)
 library(lubridate)
 library(grid)
 library(gridExtra)
-#library(kableExtra)
+# library(kableExtra)
 library(tidyverse)
 library(car)
 library(caret)
@@ -315,7 +315,7 @@ res <- survey.consumer.all %>%
 
 
 tmp = as.matrix(res$P,ncol = 5,nrow = 5)
-p.s = matrix(as.numeric(tmp[1:5,2:6]),ncol = 5, nrow= 5) %>% round(digits = 3)
+p.s = matrix(as.numeric(tmp[1:5,2:6]),ncol = 5, nrow= 5)
 rownames(p.s) = colnames(tmp)[2:6]
 colnames(p.s) = colnames(tmp)[2:6]
 # knitr::kable(res$P, row.names=TRUE, caption = "Transition matrix for consumer surveys (Monthly)")
@@ -346,21 +346,16 @@ knitr::kable(p.tel ,  caption = "A possible telemetry transtion matrix from ",  
 The final state matrix $P$ would be a combination of $P_S$ and $P_T$ given by
 
 $$P_{1}(s,t->s_1,t_1) = P_S(s)P_S(s_1)P_T(t)P_T(t_1)$$
-
-```{r eval=TRUE}
-# Calcualtion of combined state probability matrix
+```{r}
 P1 = combine.telemetry.survey(number.survey.states = n.sent,
                             number.telemetry.states = n.tel,
                             survey.probability.matix = p.s,
                             telemetry.probability.matix = p.tel)
-P1 <- round(P1,digits = 3)
 rownames(P1) <- c("++,N","+,N","0,N","-,N","- -,N","++,AN","+,AN","0,AN","-,AN","- -,AN")
 colnames(P1) <- c("++,N","+,N","0,N","-,N","- -,N","++,AN","+,AN","0,AN","-,AN","- -,AN")
-knitr::kable(P1 ,  caption = "A combined Telemetry-Sentiment State transition matrix.", row.names = TRUE)
-
-
 ```
 
+For the assumed $P_S$ and $P_T$, the combined state matrix is given in the Appendix is Table.\ref{tab:combined_transition_matrix}.  We refer to the final state as  $\mathcal I \in \{(++,N),(+,N),(0,N),(-,N),(--,N),(++,AN),(+,AN),\\(0,AN),(-,AN),(--,AN)\}$. 
 
 ## Actions
 
@@ -371,13 +366,12 @@ The actions are chosen between performing an intervention and doing nothing.
 - A relatively small shift is expected in the sentiment transition matrix as the population is relatively late to react to improvements.  This is referred to as $P_{S,1}$.The new sentiment transition matrix can be estimated similarly by choosing the fraction by which probabilities will change.  This is denoted by $\gamma_S$. Note that $\gamma_S<\gamma_T$.
 
 
-The joint transition matrix $P_1$ is associated with the combination of $P_{S,1}$ and $P_{T,1}$.
-
+The joint transition matrix $P_1$ is associated with the combination of $P_{S,1}$ and $P_{T,1}$. For the purpose of demonstration, we assume the transition probability of pNPS to change as described  in \ref{as_is_MDP} after a software intervention.  Assuming $p=10\%$ reduction in the transition probability of going from low to low, we have the new matrix as in Table \ref{tab:action1_prob1}.  Assuming driver updates will reduce the quantile of percentage of  of percentage of crash rates above the , we expect to observe a decrease in the crash
 
 
 ## Rewards
 
-A cost $r_k$ is incurred when an intervention $k\in\{1,2\}$ is performed.  The no-action cost matrix that incentivize transitions towards higher sentiment scores are denoted by $R_{T,S,1}$.
+A cost $r_k$ is incurred when an intervention $k\in\{1,2\}$ is performed.  The no-action cost matrix that incentivize transitions towards higher sentiment scores are denoted by $R_{T,S,1}$.  
 
 ```{r, echo= FALSE}
 R.st1 = matrix(c(140, 120, 75, 50, 30, -10, -25, -50, -100, -120,
@@ -393,13 +387,38 @@ R.st1 = matrix(c(140, 120, 75, 50, 30, -10, -25, -50, -100, -120,
 rownames(R.st1) <- c("++,N","+,N","0,N","-,N","- -,N","++,AN","+,AN","0,AN","-,AN","- -,AN")
 colnames(R.st1) <- c("++,N","+,N","0,N","-,N","- -,N","++,AN","+,AN","0,AN","-,AN","- -,AN")
 knitr::kable(R.st1 ,  caption = "A suggested no-action reward function",  row.names = TRUE)
+R.st2 = 25+R.st1
+
 ```
 
-The reward matrix $R_{S,T,2}$ associated with an intervention should be calculated based on $P_{1}$ as $$R_{S,T,2}(s,t->s_1,t_1) = -r_2+\sum_{x}\left(R_{S,T,1}(s,t->x)\right) P_1(s,t->x)$$ where $x\in\{(+,N),(0,N),(-,N),(+,AN),(0,AN),(-,AN)\}$
+As the reward is defined based on being in the state, the reward matrix $R_{S,T,2}$ associated with an intervention can be calculated as $$R_{S,T,2}(s,t->s_1,t_1) = -r_2+R_{S,T,1}(s,t->s_1,t_1)$$ where $(s,t), (s_1,t_1)\in\mathcal I$.
+
+
+```{r}
+P2 = P1
+p <- 0.5
+n <- nrow(P1)
+delta <- p * P1 
+P2[,1] <- P1[,1] - delta[,1]
+P2[,2:(n.sent*n.tel)] =P1[, 2:(n.sent*n.tel)] + t(matrix(rep(delta[,1],each = n.sent*n.tel-1), nrow = n.sent*n.tel-1, ncol = n.sent*n.tel))/((n.sent*n.tel)-1)
+  
+knitr::kable(P2, row.names=TRUE, caption = "\\label{tab:action1_prob1} Consumer, Software Patch")
+
+R = array(c(R.st1, R.st2), c(n.tel*n.sent, n.tel*n.sent, 2))
+P = array(c(P1, P2), c(n.tel*n.sent, n.tel*n.sent, 2))
+
+rowSums(P1)
+rowSums(P2)
+
+mdp_check(P, R)
+
+```
+
 
 \section{Customer Sentiment Analysis}
 
 \section{Recommendations}
+Our recommendations are as follows:
 
 \clearpage
 
@@ -447,5 +466,27 @@ plt.com
 ```{r figs_con, echo = FALSE, fig.cap="\\label{fig:arima.con} Train set pNPS prediction errors vs window size for consumer data.", fig.width = 8}
 plt.con <- ggplot(series.ts.main, aes(x = Duration, y = MAE, color = SeriesName)) + geom_line(size = 1)+xlab("Duration of pNPS window (Days)")+theme(legend.position = "bottom")+labs(color = "")+guides(color = guide_legend(nrow = 4))
 plt.con
+```
+
+
+\section{General}
+
+## Combined State Transtion Matrix
+
+The state transition matrix for the consumer business group is given by
+
+```{r eval=TRUE, fig.cap = "\\label{tab:combined_transition_matrix} A sample combined Telemetry-Survey State transition matrix."}
+# Calcualtion of combined state probability matrix
+
+knitr::kable(P1,  row.names = TRUE)  
+
+
+```
+
+## pNPS Transition matrix after an intervention
+
+```{r}
+knitr::kable(P2, row.names=TRUE, caption = "\\label{tab:action1_prob1} Consumer, Software Patch")
+
 ```
 
