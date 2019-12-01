@@ -10,6 +10,7 @@ header-includes:
    - \usepackage{enumitem}
    - \usepackage{float}
    - \usepackage{url}
+   
    # - \usepackage{biblatex}
    # - \addbibresource{ise560report.bib}
    - \pagenumbering{gobble}
@@ -227,7 +228,7 @@ We considered using either PSI or predicted NPS (pNPS) states as the basis for t
 
 \begin{itemize}
   \item Very Low: $pNPS \le 8$
-  \item Moderately $Low: 8 < pNPS \le 35$
+  \item Moderately Low: $8 < pNPS \le 35$
   \item Normal: $35 < pNPS \le 45$
   \item Moderately High: $45 < pNPS \le 65$
   \item Very High: $65 < pNPS$
@@ -275,7 +276,7 @@ res <- survey.consumer.all %>%
 
 PConsumer_A1 <- res$P
 
-knitr::kable(PConsumer_A1, row.names=TRUE, caption = "Consumer, Do Nothing")
+knitr::kable(PConsumer_A1, row.names=TRUE, caption = "\\label{tab:consumer_dn} Consumer, Do Nothing")
 
 ```
 
@@ -292,13 +293,7 @@ We consider the combination of telemetry and user survey as our states. We prese
 
 ### Survey Observations
 
-NPS values are charasterized based on the industry considerations given in Section \ref{sec:statedef} five 20\% quantiles denoted as $S_S \in \{++,+, 0, -, - -\}$)  and is referred to as $P_{S}$ 
-
-  - ++
-  - +: PSI between 60 and 65
-  - 0: PSI between 45 and 60
-  - - : PSI between 42 and 45
-  - - - : PSI below 42
+NPS values are charasterized based on the industry considerations given in Section \ref{sec:statedef} denoted as $S_S \in \{++,+, 0, -, - -\}$ for \{ Very high, Moderately high, Normal, Moderately low, Very low\} respectively.  The transition probabilities are denoted as $P_{S}$ and is as given in Table.\ref{tab:consumer_dn}.
 
 ```{r Preparation of sentiment matrix, echo=FALSE}
 
@@ -323,35 +318,20 @@ tmp = as.matrix(res$P,ncol = 5,nrow = 5)
 p.s = matrix(as.numeric(tmp[1:5,2:6]),ncol = 5, nrow= 5) %>% round(digits = 3)
 rownames(p.s) = colnames(tmp)[2:6]
 colnames(p.s) = colnames(tmp)[2:6]
-knitr::kable(res$P, row.names=TRUE, caption = "Transition matrix for consumer surveys (Monthly)")
+# knitr::kable(res$P, row.names=TRUE, caption = "Transition matrix for consumer surveys (Monthly)")
 
 ```
 
 ### Telemetry
 
-Assuming we have a time-series of telemetry data, states can be defined between normal $N$ and abnormal $AN$ operation.  The no-action transition matrix can be constructed from defining thresholds in the hours of battery life and in the crash-rate related to specific driver updates (Two states $S_T \in \{N, AN\}$) and is referred to as $P_{T}$.
+Assuming a time-series of driver health is available for a particular driver, states can be defined between normal $N$ and abnormal $AN$ operations depending on a performance score $ c_t $ at time $t$ and is given in Equation.\ref{crash_rate_score}.
+\begin{equation}\label{crash_rate_score}
+c_{t} = min\left\{1,\frac{\text{\# Crashes}}{\text{Total machines }\times \text{ Percent Impacted}}\right\}
+\end{equation}
+Note that our results would be more relevant if we have access to the number of unique machines that have experienced a crash.  This is can defined as 
+$$c_t = \frac{\text{ Number of unique machines crashing at time $t$ }}{\text{Total Number of Machines Impacted at time $t$}}$$
 
-An example of how the telemetry is used is as follows.
-
-```{r, echo=FALSE}
-
-telemetry.con <- read.csv("../RawData/Driver_Health_consumer_ideapad.csv", header = TRUE)
-telemetry.con <- telemetry.con %>% mutate(Driver.Name = as.character(Driver.Name),
-                                          Crashes = as.numeric(Crashes),
-                                          Percent.Impacted = as.numeric(sub("%", "",Percent.Impacted)),
-                                          Total.Machines = as.numeric(Total.Machines)) %>%
-  mutate(Percent.crash = Crashes/Total.Machines*100)
-
-q.1 <- quantile(telemetry.con$Percent.crash[telemetry.con$Driver.Name == 'atikmpag.sys'], probs = c(0.25, 0.5, 0.75))
-# quantile(telemetry.con$Percent.Impacted[telemetry.con$Driver.Name == 'atikmpag.sys'], probs = c(0.25, 0.5, 0.75))
-knitr::kable(q.1, caption = "For the crash-rate percentage, 0.25, 0.5 and 0.75 Quantiles of the atikmpag.sys driver are as follows.")
-```
-
-Assuming driver updates are released because of a high crash-rate, we calculate the percent crash-rate from
-
-$$c_{t} =  \frac{\text{Number Crashes for a specifc driver}}{\text{Number Machines associted with the driver}}$$.
-
-We then define a threshold 50\% quantile level $\gamma$ above which the epoch is labelled as Abnormal operation.
+When the performance score is above a threshold, we flag the observations as Anomalous. The transition matrix for telemetry can be constructed similar to the pNPS transition matrix by observing the number of transitions from each state for a given driver update.   specific driver updates (Two states $S_T \in \{N, AN\}$) and is referred to as $P_{T}$.  For the sake of demonstration, we assume the following transition matrix for telemetry:
 
 ```{r, echo=FALSE, eval=TRUE}
 
@@ -363,9 +343,7 @@ knitr::kable(p.tel ,  caption = "A possible telemetry transtion matrix from ",  
 
 ```
 
-
 The final state matrix $P$ would be a combination of $P_S$ and $P_T$ given by
-
 
 $$P_{1}(s,t->s_1,t_1) = P_S(s)P_S(s_1)P_T(t)P_T(t_1)$$
 
