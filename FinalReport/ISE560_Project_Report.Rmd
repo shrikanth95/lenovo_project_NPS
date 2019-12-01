@@ -58,7 +58,7 @@ Finally, our team analyzed the customer sentiment and comments to identify facto
 Our team considered three approaches to developing a predictive model--linear regression, proportional odds model and time series analysis--because these seemed potentially suitable for this problem and the team had previous experience with these modeling approaches.  We ultimately chose a linear model which will be described in detail here; a summary of the other methods and why we do not recommend them at this time can be found in Appendix \ref{app:PredModel}.
 
 We fit numerous linear models using combinations of the options listed below:
-\begin{enumerate}
+\begin{enumerate}[noitemsep]
   \item Epoch: raw data grouped by week, bi-monthly and monthly
   \item Segment: single segment (commercial and consumer combined) versus separate segements
   \item Predictors: Product Sentiment Index (PSI), average star rating, Product Series, Product Name and interactions between predictors
@@ -225,7 +225,7 @@ The next phase of our analysis was to develop a Markov decision process (MDP) to
 
 We considered using either PSI or predicted NPS (pNPS) states as the basis for the MDP.  The challenge with using PSI is that choosing states is somewhat arbitrary.  We considered standardizing the PSI scores and then delineating states using multiples of the standard deviation.  However, we felt that approach would not be as intuitive to understand because the states would not be defined according to the [-100, 100] scale Lenovo is familiar with for PSI.  On the other hand, there are established industry-standard categories for NPS\cite{Nps19}.  We chose to use these industry-standards as the basis for the pNPS states in our MDP, and they are listed below.
 
-\begin{itemize}
+\begin{itemize}[noitemsep]
   \item Very Low: $NPS \le 8$
   \item Moderately Low: $8 < NPS \le 35$
   \item Normal: $35 < NPS \le 45$
@@ -235,7 +235,7 @@ We considered using either PSI or predicted NPS (pNPS) states as the basis for t
 
 \subsection{Actions}
 
-We assumed two possible actions: {Do Nothing, Conduct Root Cause Analysis}
+We assume two possible actions: {Do Nothing, Conduct Root Cause Analysis}
 
 <!-- \begin{table}[h!] -->
 <!-- \begin{tabular}{lc|c|c|c|c|c|} -->
@@ -254,8 +254,8 @@ We assumed two possible actions: {Do Nothing, Conduct Root Cause Analysis}
 \cline{3-7}
 \multicolumn{1}{c}{}     &                & \multicolumn{5}{c|}{Applicable NPS States}  \\ \hline
 \multicolumn{1}{|c|}{ID} & Action         & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
-\multicolumn{1}{|l|}{1}  & Do Nothing                  & Y  & Y & N      & N  & N      \\ \hline
-\multicolumn{1}{|l|}{2}  & Conduct root cause analysis & Y  & Y & N      & N  & N       \\ \hline
+\multicolumn{1}{|l|}{1}  & Do Nothing                  & Y  & Y & Y      & Y  & Y      \\ \hline
+\multicolumn{1}{|l|}{2}  & Conduct Root Cause Analysis & Y  & Y & N      & N  & N       \\ \hline
 \end{tabular}
 \end{table}
 
@@ -282,7 +282,7 @@ Using the above NPS states, we then calculated the natural evolution of NPS by m
 \label{tbl:P1}
 \end{table}
 
-Next, we assume the action "Conduct root cause analysis" reduces the probability of transitioning to Very_Low by $p\%$ as compared to "Do Nothing"", and that percentage is evenly distributed among the remaining 4 states.  For example, if $p=10\%$ then the transition matrix for "Conducting root cause analysis" is shown in Table \ref{tbl:P2}.
+Next, we assume the action "Conduct Root Cause Analysis" reduces the probability of transitioning to Very_Low by $100p\%$ as compared to "Do Nothing"", and that percentage is evenly distributed among the remaining 4 states.  For example, if $p=0.1$ then the transition matrix for ``Conduct Root Cause Analysis" is shown in Table \ref{tbl:P2}.
 
 
 \begin{table}[h!]
@@ -302,7 +302,7 @@ Next, we assume the action "Conduct root cause analysis" reduces the probability
 
 \subsection{Rewards}
 
-We will assume Rewards are of the form shown in Table \ref{tbl:Reward1} with a parameter $r$.
+We assume rewards are of the form shown in Table \ref{tbl:Reward1} with a parameter $r$.
 
 \begin{table}[h!]
 \caption{Reward Matrix Template}
@@ -319,7 +319,7 @@ We will assume Rewards are of the form shown in Table \ref{tbl:Reward1} with a p
 \label{tbl:Reward1}
 \end{table}
 
-Next, we assume $r=10$ and conducting a root cause analysis has cost $c=5$.  The resulting Rewards Matrices are shown in Tables \ref{tbl:Reward2} and \ref{tbl:Reward3}.
+Next, we assume $r=10$ and conducting a root cause analysis has cost $c=5$.  Thus, the resulting Rewards Matrices are shown in Tables \ref{tbl:Reward2} and \ref{tbl:Reward3}.
 
 \begin{table}[h!]
 \caption{Example Reward Matrix- Do Nothing}
@@ -349,6 +349,25 @@ Next, we assume $r=10$ and conducting a root cause analysis has cost $c=5$.  The
 \multicolumn{1}{|l|}{Very High} & -      & -     & -      & -          & -        \\ \hline
 \end{tabular}
 \label{tbl:Reward3}
+\end{table}
+
+\subsection{Result}
+
+Given the previous assumptions, we analyzed the MDP for the following range of $p \in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]$ and a discount factor of $0.95$.  The results are listed in Table \ref{tbl:MDP}.  Conducting the root cause analysis is optimal _only_ if the NPS score is Very Low _and_ it is expected to reduce the probability of staying in the Very_Low state by 40% or more.  For all other conditions and states, the optimal policy is to Do Nothing.   The R source code used to conduct this analysis is listed in Appendix \ref{app:MDP} and the values for reward, cost and $p$ are parameters which can be easily modified.
+
+\begin{table}[h!]
+\caption{Optimal Policy as a Function of p}
+\centering
+\begin{tabular}{l|c|c|}
+\cline{2-3}
+\multicolumn{1}{c|}{}      & $p<0.4$ & $p \ge 0.4$ \\ \hline
+\multicolumn{1}{|l|}{Very Low}      & Do Nothing & Root Cause Analysis \\ \hline
+\multicolumn{1}{|l|}{Mod. Low}      & Do Nothing & Do Nothing \\ \hline
+\multicolumn{1}{|l|}{Normal}      & Do Nothing & Do Nothing \\ \hline
+\multicolumn{1}{|l|}{Mod. High}      & Do Nothing & Do Nothing \\ \hline
+\multicolumn{1}{|l|}{Very High}      & Do Nothing & Do Nothing \\ \hline
+\end{tabular}
+\label{tbl:MDP}
 \end{table}
 
 \subsection{Future MDP}
@@ -518,68 +537,9 @@ plt.con
 
 \clearpage
 
-\section{Markov Decision Process}
+\section{MDP Source Code}\label{app:MDP}
 
-
-```{r echo=FALSE}
-rm(list=ls())
-
-library(tidyverse)
-library(lubridate)
-library(grid)
-library(gridExtra)
-library(MDPtoolbox)
-
-source("../src_lenovo_project.R")
-source("../LenovoAnalysis/data_prep.R")
-source("../LenovoAnalysis/helper_calcs.R")
-source('../LenovoAnalysis/MDP_lenovo_helper.R', encoding = 'UTF-8')
-filter_raw_data()
-
-load("../CleanData/filtered_sentiment_data.Rdata")
-load("../CleanData/filtered_survey_data.Rdata")
-load("../CleanData/filtered_product_lists.Rdata")
-load("../CleanData/timeSeries.Rdata")
-
-# Define NPS states
-NPS_VERY_HIGH <- 60.0
-NPS_MOD_HIGH <- 45.0
-NPS_NORMAL <- 35.0
-NPS_MOD_LOW <- 8.0
-
-res <- survey.consumer.all %>%
-  group_by(SeriesName,
-           time = floor_date(as.Date(Date.Survey, format = "%m/%d/%y"), unit = "month")) %>%
-  NPSTransitions(NPS_VERY_HIGH, NPS_MOD_HIGH, NPS_NORMAL, NPS_MOD_LOW)
-
-PConsumer_A1 <- res$P
-
-#knitr::kable(PConsumer_A1, row.names=TRUE, caption = "Consumer, Action=Do Nothing")
-
-p <- 0.1
-n <- nrow(PConsumer_A1)
-
-# Modify VERY_LOW
-PConsumer_A2 <- PConsumer_A1
-delta <- p * PConsumer_A1[1,2]
-PConsumer_A2[1,2] <- PConsumer_A2[1,2] - delta
-PConsumer_A2[1,3] <- PConsumer_A2[1,3] + delta/(n-1)
-PConsumer_A2[1,4] <- PConsumer_A2[1,4] + delta/(n-1)
-PConsumer_A2[1,5] <- PConsumer_A2[1,5] + delta/(n-1)
-PConsumer_A2[1,6] <- PConsumer_A2[1,6] + delta/(n-1)
-
-# Modify MODERATELY_LOW
-delta <- p * PConsumer_A1[2,2]
-PConsumer_A2[2,2] <- PConsumer_A2[2,2] - delta
-PConsumer_A2[2,3] <- PConsumer_A2[2,3] + delta/(n-1)
-PConsumer_A2[2,4] <- PConsumer_A2[2,4] + delta/(n-1)
-PConsumer_A2[2,5] <- PConsumer_A2[2,5] + delta/(n-1)
-PConsumer_A2[2,6] <- PConsumer_A2[2,6] + delta/(n-1)
-
-#knitr::kable(PConsumer_A2, row.names=TRUE, caption = "Consumer, Action=Root Cause Analysis")
-
-```
-
+\lstinputlisting{../LenovoAnalysis/MDP_final.R}
 
 \clearpage
 
