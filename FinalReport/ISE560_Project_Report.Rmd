@@ -49,9 +49,9 @@ Our team was tasked with investigating methods for predicting Net Promoter Score
 
 Next we developed a framework for a Markov Decision Process (MDP) based on the predicted NPS score and categories of Normal vs. Abnormal telemetry activity (assuming that Lenovo will begin archiving the telemetry data).  We had to make many assumptions (e.g., potential actions Lenovo might take, the rewards/costs associated with those actions) in order to formulate the MDP.  Given all of these assumptions, the _specific_ results of the MDP are of less importance to Lenovo than the analysis process and the framework.  We have provided all of the souce code used to build and analyze the MDP in the Appendices, and all of the assumptions are parameters in the source code.  Our goal was to deliver a framework and tools that Lenovo could easily modify for future use. 
 
-Third, we analyzed the customer sentiment inorder to identify series level categories that would need to be improved inorder to maxmise the pNPS scores.  This was shortlisted based on first isolating categories that temporally correlated with pNPS scores.  Finally, the overall PSI was calculated for each Category-Series pair and sorted based on correlation and the PSI score.  Ten categories across ten series were identified to have high correlation with NPS scores.
+Third, we analyzed the customer sentiment inorder to identify series level categories that would need to be improved inorder to maxmise the pNPS scores.  This was shortlisted based on first isolating categories that temporally correlated with pNPS scores.  Finally, the overall PSI was calculated for each Category-Series pair and sorted based on correlation and the PSI score.   We then identify categories that would need improvement under each category.
 
-Based on our analysis, we conclude that there is some predictive value in the customer sentiment (PSI and star ratings) data.  However, there is still significant variation in NPS that is not accounted for in the models we developed.  We therefore recommend Lenovo begin archiving the telemetry data, and once Lenovo has 6-12 months of historical telemetry data available then build new models that incorporate the telemetry data as well.  We also present a framework for exploiting the large volume of sentiment data to identify potential improvements on the series level.
+Based on our analysis, we conclude that there is some predictive value in the customer sentiment (PSI and star ratings) data.  However, there is still significant variation in NPS that is not accounted for in the models we developed.  We therefore recommend Lenovo begin archiving the telemetry data, and once Lenovo has 6-12 months of historical telemetry data available then build new models that incorporate the telemetry data as well.  We also present a framework for exploiting the large volume of sentiment data to identify potential improvements on the series level.  In order to identify meaningful correlation in PSI and pNPS for each product, it is advisable to have lower bounds on the sentiment observations atleast on the series level.
 
 
 \clearpage
@@ -444,20 +444,30 @@ neg.psi2 <- overall.study2[order(overall.study2$psi.all),c('Category', 'SeriesNa
 
 ```
 
-Second, we isolate on specific categories and observe the PSI scores in the $very$ $low$ state over the entire dataset in the Appendix in Table\ref{tab:neg.psi}.  The final list of categories that needs to addressed can be deduced by sorting Table\ref{tab:neg.psi} based on the correlation. The final list of categories that would need improvements are given in Table.\ref{tab:improvements}.  A similar analysis is done for Commercial series and the suggested improvements are given in Table.\ref{tab:improvements2}.
+Second, we isolate on specific categories and observe the PSI scores in the $very$ $low$ state over the entire dataset in the Appendix in Table.\ref{tab:neg.psi}.  The final list of categories that needs to addressed can be deduced by sorting Table.\ref{tab:neg.psi} based on the correlation. The final list of categories that would need improvements are given in the Appendix in Table.\ref{tab:improvements}.  A similar analysis is done for Commercial series and the suggested improvements are given in the Appendix in Table.\ref{tab:improvements2}.
 
 ```{r}
 imp <- neg.psi[order(neg.psi$correlation,decreasing = TRUE),] %>% filter(correlation > 0.5) %>% mutate(correlation = round(correlation,digits = 2),
                                                                                                        psi.all = round(psi.all, digits = 2))
 
-knitr::kable(imp,col.names =  c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:improvements} Categories in Consumer Series that need improvements")
 
 imp2 <- neg.psi2[order(neg.psi2$correlation,decreasing = TRUE),] %>% filter(correlation > 0.5) %>% mutate(correlation = round(correlation,digits = 2),
                                                                                                        psi.all = round(psi.all, digits = 2))
-knitr::kable(imp2,col.names =  c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:improvements2} Categories in Commercial Series that need improvements")
 
 ```
 
+```{r}
+# head(nps.study[order(nps.study$nps),])
+bottom <- overall.study %>% filter(SeriesName ==  "IDEAPAD 100 SERIES"|SeriesName ==  "IDEACENTRE 300 SERIES",correlation>0,psi.all<8)
+
+# head(nps.study2[order(nps.study2$nps),])
+bottom2 <- overall.study2 %>% filter(SeriesName ==  "E SERIES"|SeriesName ==  "THINKPAD P SERIES",correlation>0,psi.all<8)
+
+```
+
+Further, this analysis also allows us to pick categories that lead to low PSI an pNPS scores.  The bottom three consumer products in terms of total pNPS include Ideapad 120s, Ideacentre 310 and Ideapad 110.  Table.\ref{tab:con_lownps} shows that reliability, power supply, network and Ports/Slots require attention for the Ideapad 100 series. For Ideacentre 300 Series, there was not enough data to observe any meaningfull correlation of categories to pNPS. Further, the existing PSI scores were generally obsered to be in the Normal range.
+
+The bottom three commercial products in terms of total pNPS include products from the E Series and Thinkpad P series.  Table.\ref{tab:com_lownps} shows that drivers require attention for P series and fan, network card and general service required attention for E series.  
 
 \section{Conclusion and Recommendations}
 
@@ -503,15 +513,15 @@ Considering the pNPS score as a stochastic process where the random variables ar
 
 $$X_{t} = \sum_{i = 1}^p \alpha_i X_{t-i} + \sum_{j = 1}^q  \beta_j \theta_{t-j} $$.
 
-where $\alpha_i$ $\forall i \in \{1,2,\ldots, p\}$  and $\beta_j$ $\forall j \in \{1,2,\ldots, q\}$ are coefficients of the linear model making a 1-step prediction of pNPS,  $\theta_t$ is the moving average component at time $t$ following a normal distribution with zero mean and variance $\sigma^2_w$. As the pNPS scores are heteroscedastic, the time series are also differenced $d$ times to satisfy the condition of stationarity.  Note that $p$, $d$ and $q$ are  referred to as the order of the model.  In Tables \ref{tab:ARIMA_Commercial} and \ref{tab:ARIMA_Consumer}, we present train set errors of best ARIMA model with the lowest Akaike information criterion (AIC) with order $(p,q,r)$.  The pNPS calcualtions were made over a period of seven days.  It is also observed that temporal correlation is sensitive to the series.
+where $\alpha_i$ $\forall i \in \{1,2,\ldots, p\}$  and $\beta_j$ $\forall j \in \{1,2,\ldots, q\}$ are coefficients of the linear model making a 1-step prediction of pNPS,  $\theta_t$ is the moving average component at time $t$ following a normal distribution with zero mean and variance $\sigma^2_w$. As the pNPS scores are heteroscedastic, the time series are also differenced $d$ times to satisfy the condition of stationarity.  Note that $p$, $d$ and $q$ are  referred to as the order of the model.  In Tables.\ref{tab:ARIMA_Commercial} and \ref{tab:ARIMA_Consumer}, we present train set errors of best ARIMA model with the lowest Akaike information criterion (AIC) with order $(p,q,r)$.  The pNPS calcualtions were made over a period of seven days.  It is also observed that temporal correlation is sensitive to the series.
 
 ```{r}
 series.ts.main.com <- series.ts.main.com%>% mutate(MAE = round(MAE,digits = 2),RMSE = round(RMSE,digits = 2)) %>%
   filter(MAE != 0,SeriesName != "ACCESSORIES", SeriesName != "ANNIVERSARY")
 series.ts.main <- series.ts.main%>% mutate(MAE = round(MAE,digits = 2),RMSE = round(RMSE,digits = 2)) %>%
   filter(MAE != 0, SeriesName != "SMART HOME", SeriesName != "OTHER")
-knitr::kable(series.ts.main.com[series.ts.main.com$Duration == 7,-5],row.names = FALSE,label = "tab:ARIMA_Commercial", caption = "Series wise Consumer Survey", col.names = c("Series", "Order", "MAE", "RMSE"))
-knitr::kable(series.ts.main[series.ts.main$Duration == 7,-5],row.names = FALSE,label = "tab:ARIMA_Consumer",caption = "Series wise Consumer Survey", col.names = c("Series", "Order", "MAE", "RMSE"))
+knitr::kable(series.ts.main.com[series.ts.main.com$Duration == 7,-5],row.names = FALSE,caption = "\\label{tab:ARIMA_Commercial} Series wise Consumer Survey", col.names = c("Series", "Order", "MAE", "RMSE"))
+knitr::kable(series.ts.main[series.ts.main$Duration == 7,-5],row.names = FALSE,caption = "\\label{tab:ARIMA_Consumer} Series wise Consumer Survey", col.names = c("Series", "Order", "MAE", "RMSE"))
 
 
 ```
@@ -773,6 +783,28 @@ knitr::kable(neg.psi,col.names = c("Category","Series", "$\\rho$","PSI"), captio
 ```{r}
 knitr::kable(neg.psi2,col.names = c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:neg.psi2} Categories that significantly correlate with NPS scores for Commercial Series($\\rho$)",  row.names = FALSE)
 ```
+
+## Summary of all relevant categories that need to be addressed that positively impact pNPS scores
+
+```{r}
+knitr::kable(imp,col.names =  c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:improvements} Categories in Consumer Series that need improvements")
+
+knitr::kable(imp2,col.names =  c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:improvements2} Categories in Commercial Series that need improvements")
+
+```
+
+
+## Categories that need mprovement for bottom Series with low pNPS scores
+
+```{r}
+bottom <- overall.study %>% filter(SeriesName ==  "IDEAPAD 100 SERIES"|SeriesName ==  "IDEACENTRE 300 SERIES",correlation>0,psi.all<8)
+knitr::kable(bottom[,c(1,4,8)], col.names = c("Category","$\\rho$","PSI"), caption = "\\label{tab:con_lownps} Categories that need to be improved For Ideapad 100 Series",  row.names = FALSE)
+bottom2 <- overall.study2 %>% filter(SeriesName ==  "E SERIES"|SeriesName ==  "THINKPAD P SERIES",correlation>0,psi.all<8)
+knitr::kable(bottom2[,c(1,2,4,8)], col.names = c("Category","Series","$\\rho$","PSI"), caption = "\\label{tab:com_lownps} Categories that need to be improved For E and P series",  row.names = FALSE)
+
+```
+
+
 
 \clearpage
 

@@ -25,6 +25,10 @@ source("../LenovoAnalysis/data_prep.R")
 source("../LenovoAnalysis/helper_calcs.R")
 source('../LenovoAnalysis/MDP_lenovo_helper.R', encoding = 'UTF-8')
 filter_raw_data()
+load("../CleanData/filtered_sentiment_data.Rdata")
+load("../CleanData/filtered_survey_data.Rdata")
+load("../CleanData/filtered_product_lists.Rdata")
+
 ```
 
 # On Consumer products
