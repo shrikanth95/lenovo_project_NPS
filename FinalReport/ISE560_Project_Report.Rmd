@@ -45,13 +45,24 @@ urlcolor: blue
 
 \section{Executive Summary}
 
+Our team was tasked with investigating methods for predicting Net Promoter Score (NPS) using customer sentiment, star rating and telemetry data.  First, we considered several approaches to developing a predictive model using various combinations of those predictors.  We ultimately determined two different linear models, one for the Consumer Segment and one for the Commercial Segment, resulted in the best predictions of the candidate approaches.  For the Consumer segment, we determined that the Series, Product Sentiment Index (PSI) and average star ratings were the most useful predictors.  For the Commercial Segment, Series and PSI (but not average star rating) were the most useful predictors.  Because Lenovo was able to provide only a small amount of telemetry data, we were not able to directly incorporate the information into the models.  However, even though there was a statistically significant relationship between NPS and the predictors previously mentioned, there is still significant variation in the NPS scores that is not accounted for by the model.  In other words, PSI, Series and average star rating only partially explain the observed NPS scores. We believe that if Lenovo is able to build up an archive of the telemetry data (e.g., 6-12 months worth) which is then incorporated into the model, that may help reduce the amount of unexplained variation in the NPS scores.
+
+Next we developed a framework for a Markov Decision Process (MDP) based on the predicted NPS score and categories of Normal vs. Abnormal telemetry activity (assuming that Lenovo will begin archiving the telemetry data).  We had to make many assumptions (e.g., potential actions Lenovo might take, the rewards/costs associated with those actions) in order to formulate the MDP.  Given all of these assumptions, the _specific_ results of the MDP are of less importance to Lenovo than the analysis process and the framework.  We have provided all of the souce code used to build and analyze the MDP in the Appendices, and all of the assumptions are parameters in the source code.  Our goal was to deliver a framework and tools that Lenovo could easily modify for future use. 
+
+Third, we analyzed the customer sentiment inorder to identify series level categories that would need to be improved inorder to maxmise the pNPS scores.  This was shortlisted based on first isolating categories that temporally correlated with pNPS scores.  Finally, the overall PSI was calculated for each Category-Series pair and sorted based on correlation and the PSI score.  Ten categories across ten series were identified to have high correlation with NPS scores.
+
+Based on our analysis, we conclude that there is some predictive value in the customer sentiment (PSI and star ratings) data.  However, there is still significant variation in NPS that is not accounted for in the models we developed.  We therefore recommend Lenovo begin archiving the telemetry data, and once Lenovo has 6-12 months of historical telemetry data available then build new models that incorporate the telemetry data as well.  We also present a framework for exploiting the large volume of sentiment data to identify potential improvements on the series level.
+
+
+\clearpage
+
 \section{Introduction}
 
 Lenovo is an international company and a market leader in the personal computer industry.  One tool Lenovo relies upon in assessing customer satisfaction is Net Promoter Score (NPS); this is a standard metric used by major corporations across many industries.  However, latency is a limitation because it can take several months to aggregate sufficient data to calculate NPS.  Therefore our team was tasked with developing a model to predict NPS from more timely information such as customer comments and ratings from websites and telemetry data.
 
-In addition to developing a predictive model for NPS, our team also characterized the natural evolution of both NPS and customer sentiment over time.  These stochastic models form the basis for a Markov Decision Process (MDP) which can be used by Lenovo to identify the optimal actions to take based on the available information.  
+In addition to developing a predictive model for NPS, our team also characterized the natural evolution of NPS over time.  This stochastic model forms the basis for a Markov Decision Process (MDP) which can be used by Lenovo to identify the optimal actions to take based on available information.  
 
-Finally, our team analyzed the customer sentiment and comments to identify factors correlated with the highest and lowest satistfaction products.  These results may help identify areas for Lenovo to focus further investments that can improve long-term customer satistifaction. Subsequent sections of this document provide detailed explanations of each phase of our analysis and associated recommendations.
+Finally, our team analyzed the customer sentiment and comments to identify factors correlated with the highest and lowest satistfaction products.  These results may help identify areas for Lenovo to focus further investments that can improve long-term customer satistifaction.
 
 \section{Predictive Model}
 
@@ -64,10 +75,10 @@ We fit numerous linear models using combinations of the options listed below:
   \item Predictors: Product Sentiment Index (PSI), average star rating, Product Series, Product Name and interactions between predictors
 \end{enumerate}
 
-We then evaluated each candidate model in a two-step process.  First, we examined residuals plots of each model to determine if key assumptions (e.g., normality and homogeneity of variance) of a linear model were satisfied.  Aggregating data weekly or bi-monthly often meant there were very few data points per epoch and/or there would be significant outliers which meant that one or both of the key assumptions were not satisfied.  Therefore we determined aggreating data by month yielded beter results for fitting the linear model.  The second phase of our analysis used F-tests/Analysis of Variance (ANOVA) to identify predictors in the full model (PSI, average stars, Series and Series*PSI interaction) which did not significantly improve the model fit and thus could be removed to yield a more parsimonious model.  Detailed steps in the model selection process can also be found in Appendix \ref{app:PredModel}.  Our final recommendation is two different models for the consumer and commercial segments:
+We then evaluated each candidate model in a two-step process.  First, we examined residuals plots of each model to determine if key assumptions (e.g., normality and homogeneity of variance) of a linear model were satisfied.  Aggregating data weekly or bi-monthly often meant there were very few data points per epoch and/or there would be significant outliers which meant that one or both of the key assumptions were not satisfied.  Therefore we determined aggreating data by month yielded beter results for fitting the linear model.  The second phase of our analysis used F-tests/Analysis of Variance (ANOVA) to identify predictors in the full model (PSI, average stars, Series and Series*PSI interaction) which did not significantly improve the model fit and thus could be removed to yield a more parsimonious model.  Detailed steps in the model selection process can also be found in Appendix \ref{app:LinModel}.  Our final recommendation is two different models for the consumer and commercial segments:
 
 ```{r echo=FALSE, results='hide', message=FALSE, warning=FALSE}
-# rm(list=ls())
+rm(list=ls())
 
 knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(out.width="75%")
@@ -153,10 +164,10 @@ mdl4 <- train(nps ~ SeriesName*psi, data=all_comm,
               method = "lm", trControl = train.control)
 ```
 
-$$NPS_{consumer} = (2.43 + \beta_1) - 0.16 * PSI + 13.42 * stars$$
-$$NPS_{commercial} = (38.87 + \beta_1) + (\beta_2 - 0.49) * PSI$$
+$$NPS_{consumer} = (2.43 + \beta_1) - 0.16 * PSI + 13.42 * stars \text{    (1)}$$
+$$NPS_{commercial} = (38.87 + \beta_1) + (\beta_2 - 0.49) * PSI \text{    (2)}$$
 
-where the $\beta_i$ are listed in Appendix \ref{app:coeff} due to the large number of catgeories in Series.
+where the $\beta_i$ are listed in Appendix \ref{app:coeff} due to the large number of Series catgeories.
 
 After model selection, we used k-fold cross validation to estimate the prediction performance of the selected models. Although the model selection process did result in statistically significant coefficients for PSI and stars, the results from the k-fold cross validation show that both models still leave significant room for improvement based on the Root Mean Square Error and Mean Absolute Error (Table \ref{tbl:KFold}).
 
@@ -173,8 +184,6 @@ After model selection, we used k-fold cross validation to estimate the predictio
 \end{table}
 
 It is perhaps easier to understand these results by comparing plots of observed versus predicted.  Figures \ref{fig:mdlConsumer} and \ref{fig:mdlComm} are scatterplots for the Consumer and Commercial data, respectively.  In both sets of plots, the grey points are the observed (NPS, PSI) scores, the grey line is the regression line for the marginal model $NPS = \beta_o + \beta_1 * PSI$ and the red dots are the _predicted values_ from equations (1) and (2) respectively.  While the predicted (red) points follow the general trend of the observed (grey) points, there is still significant variation that is not accounted for by the models.  If Lenovo started archiving the telemetry data, then new models incorporating the telemetry could be fit once several months of data is available; it is entirely possible incorporating telemetry data into the model could reduce the unaccounted for variation and give better predictions.
-
-TO DO: Number equations for linear models
 
 ```{r fig.cap="\\label{fig:mdlConsumer}Marginal Model Plots, Consumer NPS vs. PSI"}
 # Look at scatterplots fitted vs actual
@@ -202,7 +211,7 @@ ggplot(aes(x=psi, y=nps, group=SeriesName)) +
 
 \section{Markov Decision Process}
 
-The next phase of our analysis developed a Markov decision process (MDP) to identify optimal policies based on customer sentiment or satisfaction.  Where Lenovo did not identify specific componenents (e.g., actions, rewards) necessary for the MDP, we will make assumptions and identify them as such.
+The next phase of our analysis developed a Markov decision process (MDP) to identify optimal policies based on customer sentiment or satisfaction.  Where Lenovo did not identify specific componenents (e.g., actions, rewards) necessary for the MDP, we will make assumptions and identify them as such.  For this section we will focus on the the MDP for the Consumer segment.  The same analysis process would apply equally to the Commercial segment.
 
 \subsection{States}\label{sec:statedef}
 
@@ -216,7 +225,7 @@ We considered using either PSI or predicted NPS  states as the basis for the MDP
   \item Very High (++): $65 < NPS$ 
 \end{itemize}
 
-We will include telemetry status in the MDP since Lenovo would like to make use of telemetry in the future.  We will assume there are two possible telemetry states, Normal (N) and Abnormal (A).  See Appendix \ref{app:tm} for an example of how Normal/Abnormal states can be characterized once Lenovo has archived several months worth of data.
+We will include telemetry status in the MDP since Lenovo would like to make use of telemetry in the future.  We will assume there are two possible telemetry states, Normal (N) and Abnormal (A).  See Appendix \ref{app:TM} for an example of how Normal/Abnormal states can be characterized once Lenovo has archived several months worth of data.
 
 Therefore the possible combined states for the MDP are {(++,N), (++,A), (+,N), (+,A), (0,N), (0,A), (-,N), (-,A), (--,N), (--,A)}
 
@@ -236,14 +245,15 @@ We assume two possible actions: {Do Nothing, Conduct Root Cause Analysis}.  Furt
 \end{tabular}
 \end{table}
 
-\subsection{Transitions}
+\subsection{Transitions}\label{sec:transitions}
 
-We then calculated the natural evolution of NPS by month (i.e., same epoch as linear model) from the survey data.
+We calculated the natural evolution of NPS by month (i.e., same epoch as linear model) from the survey data.  Since we do not have enough data to calculate the natural evolution of Telemetry states, we will assume a transition matrix as shown below.
 
-\begin{table}[h!]
-\caption{Consumer, NPS Only, Action = Do Nothing}
+\begin{table}[h]
+\caption{Individual Transition Matrices, NPS and Telemetry}
 \centering
-\begin{tabular}{l|c|c|c|c|c|}
+\hspace*{\fill}
+\begin{tabular}[t]{l|c|c|c|c|c|}
 \cline{2-6}
 \multicolumn{1}{c|}{}      & - - & - & 0 & + & ++ \\ \hline
 \multicolumn{1}{|l|}{- -} & 0.451    & 0.220    & 0.055   & 0.143 & 0.132    \\ \hline
@@ -252,23 +262,18 @@ We then calculated the natural evolution of NPS by month (i.e., same epoch as li
 \multicolumn{1}{|l|}{+} & 0.200  & 0.220    & 0.160     & 0.200  & 0.220       \\ \hline
 \multicolumn{1}{|l|}{++} & 0.214    & 0.054    & 0.125     & 0.161    & 0.446      \\ \hline
 \end{tabular}
-\label{tbl:P1}
-\end{table}
-
-Since we do not have enough data to calculate the natural evolution of Telemetry states, we will assume the following:
-
-\begin{table}[h!]
-\caption{Consumer, Telemetry Only, Action = Do Nothing}
-\centering
-\begin{tabular}{l|c|c|}
+\hfill
+\begin{tabular}[t]{l|c|c|}
 \cline{2-3}
 \multicolumn{1}{c|}{}      & N & A  \\ \hline
 \multicolumn{1}{|l|}{N}      & 0.75 & 0.25  \\ \hline
 \multicolumn{1}{|l|}{A}      & 0.25 & 0.75  \\ \hline
 \end{tabular}
+\hspace*{\fill}
+\label{tbl:P1}
 \end{table}
 
-We then combine the individual transition matrices to form the transition matrix for our MDP.  This natural evolution for the combined states is equivalent to the "Do Nothing" action.
+We combined the individual transition matrices to form the transition matrix for our MDP.  This natural evolution for the combined states is equivalent to the "Do Nothing" action.
 
 ```{r}
 
@@ -302,93 +307,124 @@ P1 = combine.matrix(p.s,
 rownames(P1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
 colnames(P1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
 
-knitr::kable(round(P1, digits=3), row.names=TRUE, caption = "Consumer, All States, Action = Do Nothing")
+knitr::kable(round(P1, digits=3), row.names=TRUE, caption = "Consumer, All States, Action = Do Nothing  \\label{tbl:P1}")
 
 ```
 
-Next, we assume the action "Conduct Root Cause Analysis" reduces the probability of transitioning to Very_Low by $100p\%$ as compared to "Do Nothing", and that percentage is evenly distributed among the remaining 4 states.  For example, if $p=0.1$ then the transition matrix for ``Conduct Root Cause Analysis" is shown in Table \ref{tbl:P2}.
+Next, we assume the action "Conduct Root Cause Analysis" reduces the probability of transitioning to Very_Low by $100p\%$ compared to "Do Nothing" if Telemetry is Abnormal and $75p\%$ if Telemetry is Normal (i.e., root cause analysis is more likely to succeed if there is abnormal telemetry data to troublehsoot).  The change in percentage is evenly distributed among the remaining 4 states.  For example, if $p=0.1$ then the transition matrix for ``Conduct Root Cause Analysis" is shown in Table \ref{tbl:P2}.  Note that only the rows which differ from Table \ref{tbl:P1} are displayed.
 
-\begin{table}[h!]
-\caption{Consumer, Action = Conduct Root Cause Analysis}
-\centering
-\begin{tabular}{l|c|c|c|c|c|}
-\cline{2-6}
-\multicolumn{1}{c|}{}      & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
-\multicolumn{1}{|l|}{Very Low} & 0.406    & 0.231    & 0.066   & 0.154 & 0.143    \\ \hline
-\multicolumn{1}{|l|}{Mod. Low} & 0.182    & 0.511    & 0.084   & 0.106  & 0.117       \\ \hline
-\multicolumn{1}{|l|}{Normal}   & 0.161   & 0.355  & 0.194     & 0.160   & 0.097       \\ \hline
-\multicolumn{1}{|l|}{Mod High} & 0.200  & 0.220    & 0.160     & 0.200  & 0.220       \\ \hline
-\multicolumn{1}{|l|}{Very High} & 0.214    & 0.054    & 0.125     & 0.161    & 0.446      \\ \hline
-\end{tabular}
-\label{tbl:P2}
-\end{table}
+
+```{r}
+
+d <- 0.75
+p <- 0.1
+n <- 5
+P2 <- P1
+
+# Modify VERY_LOW, Normal Telemetry
+delta <- d * p * P1[1,1]/sum(P1[1,1:5])
+P2[1,1] <- P1[1,1] - delta
+P2[1,2] <- P1[1,2] + delta/(n-1)
+P2[1,3] <- P1[1,3] + delta/(n-1)
+P2[1,4] <- P1[1,4] + delta/(n-1)
+P2[1,5] <- P1[1,5] + delta/(n-1)
+delta <- d * p * P1[1,6]/sum(P1[1,6:10])
+P2[1,6] <- P1[1,6] - delta
+P2[1,7] <- P1[1,7] + delta/(n-1)
+P2[1,8] <- P1[1,8] + delta/(n-1)
+P2[1,9] <- P1[1,9] + delta/(n-1)
+P2[1,10] <- P1[1,10] + delta/(n-1)
+
+# Modify MOD_LOW, Normal Telemetry
+delta <- d *p * P1[2,1]/sum(P1[2,1:5])
+P2[2,1] <- P1[2,1] - delta
+P2[2,2] <- P1[2,2] + delta/(n-1)
+P2[2,3] <- P1[2,3] + delta/(n-1)
+P2[2,4] <- P1[2,4] + delta/(n-1)
+P2[2,5] <- P1[2,5] + delta/(n-1)
+delta <- d *p * P1[2,6]/sum(P1[2,6:10])
+P2[2,6] <- P1[2,6] - delta
+P2[2,7] <- P1[2,7] + delta/(n-1)
+P2[2,8] <- P1[2,8] + delta/(n-1)
+P2[2,9] <- P1[2,9] + delta/(n-1)
+P2[2,10] <- P1[2,10] + delta/(n-1)
+
+# Modify VERY_LOW, Abnormal Telemetry
+delta <- p * P1[6,1]/sum(P1[6,1:5])
+P2[6,1] <- P1[6,1] - delta
+P2[6,2] <- P1[6,2] + delta/(n-1)
+P2[6,3] <- P1[6,3] + delta/(n-1)
+P2[6,4] <- P1[6,4] + delta/(n-1)
+P2[6,5] <- P1[6,5] + delta/(n-1)
+delta <- p * P1[6,6]/sum(P1[6,6:10])
+P2[6,6] <- P1[6,6] - delta
+P2[6,7] <- P1[6,7] + delta/(n-1)
+P2[6,8] <- P1[6,8] + delta/(n-1)
+P2[6,9] <- P1[6,9] + delta/(n-1)
+P2[6,10] <- P1[6,10] + delta/(n-1)
+
+# Modify MOD_LOW, Normal Telemetry
+delta <- p * P1[7,1]/sum(P1[7,1:5])
+P2[7,1] <- P1[7,1] - delta
+P2[7,2] <- P1[7,2] + delta/(n-1)
+P2[7,3] <- P1[7,3] + delta/(n-1)
+P2[7,4] <- P1[7,4] + delta/(n-1)
+P2[7,5] <- P1[7,5] + delta/(n-1)
+delta <- p * P1[7,1]/sum(P1[7,6:10])
+P2[7,6] <- P1[7,6] - delta
+P2[7,7] <- P1[7,7] + delta/(n-1)
+P2[7,8] <- P1[7,8] + delta/(n-1)
+P2[7,9] <- P1[7,9] + delta/(n-1)
+P2[7,10] <- P1[7,10] + delta/(n-1)
+
+knitr::kable(round(P2[c(1,2,6,7),], digits=3), row.names=TRUE, 
+             caption = "Consumer, All States, Action = Root Cause Analysis \\label{tbl:P2}")
+
+```
 
 \subsection{Rewards}
 
-We assume rewards are of the form shown in Table \ref{tbl:Reward1} with a parameter $r$.
+We assume rewards are of the form shown in Tables \ref{tbl:R1} and \ref{tbl:R2} with parameters $r1$ and $r2$.
 
 \begin{table}[h!]
-\caption{Reward Matrix Template}
+\caption{Reward Matrix Templates}
 \centering
-\begin{tabular}{l|c|c|c|c|c|}
+\hspace*{\fill}
+\begin{tabular}[t]{l|c|c|c|c|c|}
 \cline{2-6}
-\multicolumn{1}{c|}{}      & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
-\multicolumn{1}{|l|}{Very Low} & -2r      & -r       & 0      & r         & 2r        \\ \hline
-\multicolumn{1}{|l|}{Mod. Low} & -2r      & -r       & 0      & r         & 2r        \\ \hline
-\multicolumn{1}{|l|}{Normal}   & -2r      & -r      & 0      & r          & 2r        \\ \hline
-\multicolumn{1}{|l|}{Mod High} & -2r      & -r      & 0      & r          & 2r        \\ \hline
-\multicolumn{1}{|l|}{Very High} & -2r      & -r     & 0      & r          & 2r        \\ \hline
+\multicolumn{1}{c|}{}      & - - & - & 0 & + & ++ \\ \hline
+\multicolumn{1}{|l|}{- -} & -2r1    & -r1    & 0   & r1 & 2r1    \\ \hline
+\multicolumn{1}{|l|}{-} & -2r1    & -r1    & 0   & r1  & 2r1       \\ \hline
+\multicolumn{1}{|l|}{0}   & -2r1   & -r1  & 0     & r1   & 2r1       \\ \hline
+\multicolumn{1}{|l|}{+} & -2r1  & -r1    & 0     & r1  & 2r1       \\ \hline
+\multicolumn{1}{|l|}{++} & -2r1    & -r1    & 0     & r1    & 2r1      \\ \hline
 \end{tabular}
-\label{tbl:Reward1}
+\hfill
+\begin{tabular}[t]{l|c|c|}
+\cline{2-3}
+\multicolumn{1}{c|}{}      & N & A  \\ \hline
+\multicolumn{1}{|l|}{N}      & 2r2 & -r2  \\ \hline
+\multicolumn{1}{|l|}{A}      & r2 & -2r2  \\ \hline
+\end{tabular}
+\hspace*{\fill}
+\label{tbl:R1}
 \end{table}
 
-Next, we assume $r=10$ and conducting a root cause analysis has cost $c=5$.  The resulting Rewards Matrices are shown in Tables \ref{tbl:Reward2} and \ref{tbl:Reward3}.
+We will assume $r1=10$, $r2=5$ and conducting a root cause analysis has cost $c=7$. Note: The combined reward matrices using these parameters can be found in Appendix \ref{app:Rewards}.
 
-\begin{table}[h!]
-\caption{Example Reward Matrix- Do Nothing}
-\centering
-\begin{tabular}{l|c|c|c|c|c|}
-\cline{2-6}
-\multicolumn{1}{c|}{}     & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
-\multicolumn{1}{|l|}{Very Low} & -20      & -10       & 0      & 10         & 20        \\ \hline
-\multicolumn{1}{|l|}{Mod. Low} & -20      & -10       & 0      & 10         & 20        \\ \hline
-\multicolumn{1}{|l|}{Normal}   & -20      & -10      & 0      & 10          & 20        \\ \hline
-\multicolumn{1}{|l|}{Mod High} & -20      & -10      & 0      & 10          & 20        \\ \hline
-\multicolumn{1}{|l|}{Very High} & -20      & -10     & 0      & 10          & 20        \\ \hline
-\end{tabular}
-\label{tbl:Reward2}
-\end{table}
+\subsection{Results}
 
-\begin{table}[h!]
-\caption{Example Reward Matrix- Conduct Root Cause Analysis}
-\centering
-\begin{tabular}{l|c|c|c|c|c|}
-\cline{2-6}
-\multicolumn{1}{c|}{}      & Very Low & Mod. Low & Normal & Mod. High & Very High \\ \hline
-\multicolumn{1}{|l|}{Very Low} & -25      & -15       & -5      & 5         & 15        \\ \hline
-\multicolumn{1}{|l|}{Mod. Low} & -25      & -15       & -5      & 5         & 15        \\ \hline
-\multicolumn{1}{|l|}{Normal}   & -      & -      & -      & -          & -        \\ \hline
-\multicolumn{1}{|l|}{Mod High} & -      & -      & -      & -          & -        \\ \hline
-\multicolumn{1}{|l|}{Very High} & -      & -     & -      & -          & -        \\ \hline
-\end{tabular}
-\label{tbl:Reward3}
-\end{table}
-
-\subsection{Result}
-
-Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]$ and a discount factor of $0.95$.  The results are listed in Table \ref{tbl:MDP}.  Conducting the root cause analysis is optimal _only_ if the NPS score is Very Low _and_ it is expected to reduce the probability of staying in the Very_Low state by 40% or more.  For all other conditions and states, the optimal policy is Do Nothing.   The R source code used to conduct this analysis is listed in Appendix \ref{app:MDP} and the values for reward, cost, discount factor and $p$ are parameters which can be easily modified by Lenovo.
+Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]$ and a discount factor of $0.95$.  The results as a function of $p$ are listed in Table \ref{tbl:MDP}, where "-" represents "Do Nothing" and "RC" represents "Conduct Root Cause Analysis".  The R source code used to conduct this analysis are listed in Appendices \ref{app:MDP} and \ref{app:Addl}; the values for rewards, cost, and discount factor are parameters which can be easily modified by Lenovo.
 
 \begin{table}[h!]
 \caption{Optimal Policy as a Function of p}
 \centering
-\begin{tabular}{l|c|c|}
-\cline{2-3}
-\multicolumn{1}{c|}{}      & $p<0.4$ & $p \ge 0.4$ \\ \hline
-\multicolumn{1}{|l|}{Very Low}      & Do Nothing & Root Cause Analysis \\ \hline
-\multicolumn{1}{|l|}{Mod. Low}      & Do Nothing & Do Nothing \\ \hline
-\multicolumn{1}{|l|}{Normal}      & Do Nothing & Do Nothing \\ \hline
-\multicolumn{1}{|l|}{Mod. High}      & Do Nothing & Do Nothing \\ \hline
-\multicolumn{1}{|l|}{Very High}      & Do Nothing & Do Nothing \\ \hline
+\begin{tabular}{l|c|c|c|c|c|c|c|c|c|c|}
+\cline{2-11}
+\multicolumn{1}{c|}{} & - -, N & -, N & 0, N & +, N & ++, N & - -, A & -, A & 0, A & +, A & ++, A \\ \hline
+\multicolumn{1}{|l|}{$p \le 0.2$} & - & - & - & - & - & - & - & - & - & - \\ \hline
+\multicolumn{1}{|l|}{$p = 0.3$} & - & - & - & - & - & RC & - & - & - & - \\ \hline
+\multicolumn{1}{|l|}{$p \ge 0.4$} & RC & - & - & - & - & RC & - & - & - & - \\ \hline
 \end{tabular}
 \label{tbl:MDP}
 \end{table}
@@ -397,13 +433,13 @@ Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0
 
 In order to identify areas that are faring well with the population and those that need improvement, it is useful to tap into large datasets for information on potential areas of improvemnt.  We analyze the categories in the sentiment data as a proxy for pNPS scores.  
 
-First, we start by observing the temporal correlation $\rho$ between PSI scores and pNPS when the former is conditioned on both categories and series.  It is observed that the PSI associated with categories listed in Fig.\ref{fig:neg-corr} positively correlate with pNPS timeseries.  Table \ref{tab:corr_category}, highlights the number of categories that correlate non-trivially for each series in the consumer group.  Each PSI/pNPS score was calcualted over a period of 1 month.  Assuming pNPS scores are true representations of the user perception, understanding correlation with PSI helps in setting a baseline for comparing againts categories that need improvement.  Categories that correlate negatively with pNPS scores can be considred as false postive indicators.
+First, we start by observing the temporal correlation $\rho$ between PSI scores and pNPS when the former is conditioned on both categories and series.  It is observed that the PSI associated with categories listed in Fig.\ref{fig:neg-corr} positively correlate with pNPS timeseries.  Table \ref{tab:corr_category}, highlights the number of categories that correlate non-trivially for each series in the consumer group.  Each PSI/pNPS score was calculated over a period of 1 month.  Assuming pNPS scores are true representations of the user perception, understanding correlation with PSI helps in setting a baseline for comparing againts categories that need improvement.  Categories that correlate negatively with pNPS scores can be considred as false postive indicators.
 
 ```{r}
 overall.study <- merge(summary.cat, psi.study,by = "Category")
 neg.psi <- overall.study[order(overall.study$psi.all),c('Category', 'SeriesName', 'correlation',"psi.all")] %>% filter(correlation!=0&psi.all<8)
 
-overall.study2 <- merge(summary.cat2, psi.study,by = "Category")
+overall.study2 <- merge(summary.cat2, psi.study2,by = "Category")
 neg.psi2 <- overall.study2[order(overall.study2$psi.all),c('Category', 'SeriesName', 'correlation',"psi.all")] %>% filter(correlation!=0&psi.all<8)
 
 ```
@@ -423,11 +459,8 @@ knitr::kable(imp2,col.names =  c("Category","Series", "$\\rho$","PSI"), caption 
 ```
 
 
+\section{Conclusion and Recommendations}
 
-
-
-\section{Conclusions}
-Our recommendations are as follows:
 
 \clearpage
 
@@ -462,11 +495,7 @@ knitr::kable(data.frame(ncomm, unname(beta_coeff1), unname(beta_coeff2)),
 
 \clearpage
 
-\section{Predictive Model Approaches}\label{app:PredModel}
-
-\subsection{Linear Model}
-
-\subsection{Proportional Odds Model}
+\section{Alternative Model Approach}\label{app:PredModel}
 
 \subsection{Time Series Analysis}
 
@@ -500,8 +529,199 @@ plt.con <- ggplot(series.ts.main, aes(x = Duration, y = MAE, color = SeriesName)
 plt.con
 ```
 
+\clearpage
 
-\section{General}
+\section{Linear Model Selection}\label{app:LinModel}
+
+\subsection{Consumer Model}
+
+```{r echo=TRUE}
+# Consumer Only
+psi <- sentiment.consumer.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Comment.Date, 
+                                     format = "%m/%d/%y"), 
+                             unit = "month")) %>%
+  calcPSI()
+
+nps <- survey.consumer.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Date.Survey, 
+                                     format = "%m/%d/%Y"), 
+                             unit = "month")) %>%
+  calcNPS()
+
+# Combine to get data.frame with nps and psi matching by date and Series
+# Drop any Series with less than 3 data points (insufficient data)
+all <- inner_join(psi, nps) %>%
+  filter(total > 2) %>%
+  mutate(occurs = n()) %>%
+  filter(occurs > 3) %>%
+  drop_na()
+
+# Fit full model with interation term
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl1 <- train(nps ~ SeriesName*psi + stars, data=all,
+              method = "lm", trControl = train.control)
+
+# Fit model without interaction term
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl2 <- train(nps ~ SeriesName + psi + stars, data=all,
+              method = "lm", trControl = train.control)
+
+par(mfrow=c(2,2))
+plot(mdl2$finalModel)
+
+res <- anova(mdl2$finalModel, mdl1$finalModel)
+```
+
+The F-statistic comparing the full and restricted models is 1.402 with 1 and 119 degrees of freedom.  The p-value is 0.168.  Therefore we fail to reject the null hypothesis, and we conclude the additional predictors in the full model do not significantly improve the fit.
+
+\subsection{Commercial Model}
+
+```{r echo=TRUE}
+# Commercial Only
+psi <- sentiment.comm.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Comment.Date, 
+                                     format = "%m/%d/%y"), 
+                             unit = "month")) %>%
+  calcPSI()
+
+nps <- survey.comm.all %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Date.Survey, 
+                                     format = "%m/%d/%Y"), 
+                             unit = "month")) %>%
+  calcNPS()
+
+# Combine to get data.frame with nps and psi matching by date and Series
+# Drop any Series with less than 3 data points (insufficient data)
+all <- inner_join(psi, nps) %>%
+  #filter(total > 2) %>%
+  mutate(occurs = n()) %>%
+  filter(occurs > 3) %>%
+  drop_na()
+
+# Fit full model with interaction term
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl3 <- train(nps ~ SeriesName*psi + stars, data=all,
+              method = "lm", trControl = train.control)
+
+# Fit model without stars
+train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
+
+mdl4 <- train(nps ~ SeriesName*psi, data=all,
+              method = "lm", trControl = train.control)
+
+par(mfrow=c(2,2))
+plot(mdl4$finalModel)
+
+res <- anova(mdl3$finalModel, mdl4$finalModel)
+```
+
+The F-statistic comparing the full and restricted models is 1.3025 with 1 and 106 degrees of freedom.  The p-value 0.2563.  Therefore we fail to reject the null hypothesis, and we conclude the additional predictors in the full model do not significantly improve the fit.
+
+
+\clearpage
+
+\section{MDP Rewards Matrices}\label{app:Rewards}
+
+Assuming $r1=10$, $r2=5$ and $c=7$, the combined reward matrices for each action are as follows:
+
+```{r}
+
+###### Define Rewards Matrices ######
+# Select parameters
+n <- 5
+r1 <- 10
+r2 <- 5
+cost <- 7
+# Do Nothing
+Rnps <- matrix(rep(c(-2*r1, -1*r1, 0, r1, 2*r1),n),
+               nrow=n,
+               byrow=TRUE)
+Rtel <- matrix(c(2*r2, r2, -r2, -2*r2), nrow=2)
+
+R_A1 <- combine.matrix(Rnps, Rtel, TRUE)
+rownames(R_A1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N",
+                    "- - , A"," -, A"," 0, A"," +, A","++, A")
+colnames(R_A1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N",
+                    "- - , A"," -, A"," 0, A"," +, A","++, A")
+
+knitr::kable(R_A1, row.names=TRUE, caption = "Consumer, Rewards, Action = Do Nothing")
+```
+
+```{r}
+# Root Cause Analysis
+# Select parameters
+r1 <- 10
+r2 <- 5
+cost <- 7
+# Set cost to "infinity" for states where action is not available
+INF <- 9999
+R_A2 <- matrix(-INF, nrow=nrow(R_A1), ncol=ncol(R_A1))
+R_A2[1,] <- R_A1[1,] - cost
+R_A2[2,] <- R_A1[2,] - cost
+R_A2[6,] <- R_A1[6,] - cost
+R_A2[7,] <- R_A1[7,] - cost
+
+rownames(R_A2) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
+colnames(R_A2) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
+
+knitr::kable(R_A2[c(1,2,6,7),], row.names=TRUE, caption = "Consumer, Rewards, Action = Root Cause Analysis")
+
+```
+
+\clearpage
+
+\section{MDP Analysis Source Code}\label{app:MDP}
+
+\lstinputlisting{../LenovoAnalysis/MDP_final.R}
+
+\clearpage
+
+\section{Additional R code}\label{app:Addl}
+
+\subsection{data\_prep.R}
+
+\lstinputlisting{../LenovoAnalysis/data_prep.R}
+
+\subsection{helper\_calcs.R}
+
+\lstinputlisting{../LenovoAnalysis/helper_calcs.R}
+
+\clearpage
+
+\section{Estimating Telemetry States}\label{app:TM}
+
+Assuming a time-series of driver health is available for a particular driver, states can be defined between normal $N$ and abnormal $AN$ operations depending on a performance score $ c_t $ at time $t$ and is given in Equation.\ref{crash_rate_score}.
+\begin{equation}\label{crash_rate_score}
+c_{t} = min\left\{1,\frac{\text{\# Crashes}}{\text{Total machines }\times \text{ Percent Impacted}}\right\}
+\end{equation}
+Note that our results would be more relevant if we have access to the number of unique machines that have experienced a crash.  This is can defined as 
+$$c_t = \frac{\text{ Number of unique machines crashing at time $t$ }}{\text{Total Number of Machines Impacted at time $t$}}$$
+
+When the performance score is above a threshold, we flag the observations as Anomalous. The transition matrix for telemetry can be constructed similar to the pNPS transition matrix by observing the number of transitions from each state for a given driver update.   specific driver updates (Two states $S_T \in \{N, AN\}$) and is referred to as $P_{T}$.  For the sake of demonstration, we assume the following transition matrix for telemetry:
+
+```{r, echo=FALSE, eval=TRUE}
+
+n.tel = 2
+p.tel = matrix(c(0.75, 0.25, 0.25, 0.75),nrow = 2, ncol = 2, byrow = TRUE)
+rownames(p.tel) <- c("N","AN")
+colnames(p.tel) <- c("N","AN")
+knitr::kable(p.tel ,  caption = "A possible telemetry transtion matrix from ",  row.names = TRUE)
+
+```
+
+The final state matrix $P$ would be a combination of $P_S$ and $P_T$ as shown in Section \ref{sec:transitions}.
+
+
+
+\section{Recommendation Analysis}
 
 ## Category wise correlation between pNPS and PSI 
 
