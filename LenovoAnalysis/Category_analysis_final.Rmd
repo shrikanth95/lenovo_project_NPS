@@ -1,0 +1,206 @@
+
+
+```{r}
+# rm(list=ls())
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(out.width="75%")
+knitr::opts_chunk$set(fig.align = "center")
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(error = FALSE)
+
+library(tidyverse)
+library(lubridate)
+library(grid)
+library(gridExtra)
+# library(kableExtra)
+library(tidyverse)
+#library(kableExtra)
+library(car)
+library(caret)
+
+source("../src_lenovo_project.R")
+source("../LenovoAnalysis/data_prep.R")
+source("../LenovoAnalysis/helper_calcs.R")
+source('../LenovoAnalysis/MDP_lenovo_helper.R', encoding = 'UTF-8')
+filter_raw_data()
+```
+
+# On Consumer products
+
+```{r}
+# On consumer products
+
+psi.series <- sentiment.consumer %>%
+  mutate(ProductName = I(toupper(as.character(Product)))) %>%  
+  group_by(SeriesName, Category, time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg)) %>% ungroup() %>% mutate(SeriesName = as.character(SeriesName)) %>% drop_na()
+
+# Calculate NPS by month and series
+nps.series <- survey.consumer%>%
+  mutate(ProductName = I(toupper(as.character(Product))), 
+         SeriesName = I(toupper(as.character(Series)))) %>%
+  mutate(NPS = as.numeric(as.character(Product.NPS))) %>%
+  group_by(SeriesName,  time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total) %>%  ungroup() %>% drop_na()
+
+```
+
+
+```{r}
+# ggplot(psi.series)+geom_line(aes(x = time, y = psi, group = Category))+facet_wrap(.~ SeriesName)
+summary.cat = unique(psi.series[,c(1,2)])
+summary.cat = cbind(summary.cat, size = rep(0,nrow(summary.cat)), correlation = rep(0,nrow(summary.cat)))
+# Remove outliers (100 and -100)
+
+for(i in 1:nrow(summary.cat)){
+    slice = merge(psi.series[(psi.series$SeriesName==summary.cat$SeriesName[i])& (psi.series$Category==summary.cat$Category[i]),c("time", "psi")],
+                  nps.series[nps.series$SeriesName==summary.cat$SeriesName[i],c("time", "nps")], by = "time")
+    summary.cat$size[i] = nrow(slice)
+    if(nrow(slice)>3){
+      summary.cat$correlation[i] = cor(slice$psi, slice$nps)
+      # print(ggplot(slice, aes(x = psi, y = nps)) + geom_point())
+    }
+}
+
+high.corr = summary.cat %>% filter(correlation >0.3)
+low.corr =  summary.cat %>% filter(correlation < (-0.3))
+
+psi.high <- merge(high.corr,psi.series,by = c("SeriesName", "Category"))
+psi.low <- merge(low.corr,psi.series,by = c("SeriesName", "Category"))
+slice.high = merge(psi.high,nps.series, by =c("SeriesName","time"))
+slice.low = merge(psi.low,nps.series, by =c("SeriesName","time"))
+
+
+```
+
+
+```{r}
+
+psi.study <- sentiment.consumer %>%
+  mutate(ProductName = I(toupper(as.character(Product)))) %>%  
+  group_by(Category) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE"), total = n()) %>%
+  mutate(psi.all = 100 * (pos - neg)/(pos +  neg)) %>% ungroup() %>% drop_na() %>% filter(total>50)
+
+nps.study <- survey.consumer%>%
+  mutate(ProductName = I(toupper(as.character(Product))), 
+         SeriesName = I(toupper(as.character(Series)))) %>%
+  mutate(NPS = as.numeric(as.character(Product.NPS))) %>%
+  group_by(ProductName, time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "year")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total) %>%  ungroup() %>% drop_na() %>% filter(total>50)
+nps.study
+
+
+```
+
+
+
+# On Commercial products
+
+```{r}
+
+
+psi.series2 <- sentiment.comm %>%
+  mutate(ProductName = I(toupper(as.character(Product)))) %>%  
+  group_by(SeriesName, Category, time = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE")) %>%
+  mutate(psi = 100 * (pos - neg)/(pos +  neg)) %>% ungroup() %>% mutate(SeriesName = as.character(SeriesName)) %>% drop_na()
+
+# Calculate NPS by month and series
+nps.series2 <- survey.comm%>%
+  mutate(ProductName = I(toupper(as.character(Product))), 
+         SeriesName = I(toupper(as.character(Series)))) %>%
+  mutate(NPS = as.numeric(as.character(Product.NPS))) %>%
+  group_by(SeriesName,  time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "month")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total) %>%  ungroup() %>% drop_na()
+
+```
+
+
+```{r}
+# ggplot(psi.series)+geom_line(aes(x = time, y = psi, group = Category))+facet_wrap(.~ SeriesName)
+summary.cat2 = unique(psi.series2[,c(1,2)])
+summary.cat2 = cbind(summary.cat2, size = rep(0,nrow(summary.cat2)), correlation = rep(0,nrow(summary.cat2)))
+# Remove outliers (100 and -100)
+
+for(i in 1:nrow(summary.cat2)){
+    slice = merge(psi.series2[(psi.series2$SeriesName==summary.cat2$SeriesName[i])& (psi.series2$Category==summary.cat2$Category[i]),c("time", "psi")],
+                  nps.series2[nps.series2$SeriesName==summary.cat2$SeriesName[i],c("time", "nps")], by = "time")
+    summary.cat2$size[i] = nrow(slice)
+    if(nrow(slice)>3){
+      summary.cat2$correlation[i] = cor(slice$psi, slice$nps)
+      # print(ggplot(slice, aes(x = psi, y = nps)) + geom_point())
+    }
+}
+
+high.corr2 = summary.cat2 %>% filter(correlation >0.3)
+low.corr2 =  summary.cat2 %>% filter(correlation < (-0.3))
+
+psi.high2 <- merge(high.corr2,psi.series2,by = c("SeriesName", "Category"))
+psi.low2 <- merge(low.corr2,psi.series2,by = c("SeriesName", "Category"))
+slice.high2 = merge(psi.high2,nps.series2, by =c("SeriesName","time"))
+slice.low2 = merge(psi.low2,nps.series2, by =c("SeriesName","time"))
+
+
+```
+
+
+```{r}
+
+psi.study2 <- sentiment.comm %>%
+  mutate(ProductName = I(toupper(as.character(Product)))) %>%  
+  group_by(Category) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE"), total = n()) %>%
+  mutate(psi.all = 100 * (pos - neg)/(pos +  neg)) %>% ungroup() %>% drop_na() %>% filter(total>50)
+
+nps.study2 <- survey.comm%>%
+  mutate(ProductName = I(toupper(as.character(Product))), 
+         SeriesName = I(toupper(as.character(Series)))) %>%
+  mutate(NPS = as.numeric(as.character(Product.NPS))) %>%
+  group_by(ProductName, time = floor_date(as.Date(Date.Survey, format = "%m/%d/%Y"), unit = "year")) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total) %>%  ungroup() %>% drop_na() %>% filter(total>50)
+nps.study2
+
+
+```
+
+
+
+```{r}
+save(summary.cat, 
+     slice.low, 
+     slice.high, 
+     psi.high, 
+     psi.low, 
+     psi.study,
+     nps.study,
+     
+     summary.cat2, 
+     slice.low2, 
+     slice.high2, 
+     psi.high2, 
+     psi.low2, 
+     psi.study2,
+     nps.study2,
+     file = "../CleanData/correlation.Rdata")
+```
+
