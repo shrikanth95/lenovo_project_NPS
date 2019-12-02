@@ -45,6 +45,8 @@ urlcolor: blue
 
 \section{Executive Summary}
 
+\clearpage
+
 \section{Introduction}
 
 Lenovo is an international company and a market leader in the personal computer industry.  One tool Lenovo relies upon in assessing customer satisfaction is Net Promoter Score (NPS); this is a standard metric used by major corporations across many industries.  However, latency is a limitation because it can take several months to aggregate sufficient data to calculate NPS.  Therefore our team was tasked with developing a model to predict NPS from more timely information such as customer comments and ratings from websites and telemetry data.
@@ -215,7 +217,7 @@ We considered using either PSI or predicted NPS  states as the basis for the MDP
   \item Very High (++): $65 < NPS$ 
 \end{itemize}
 
-We will include telemetry status in the MDP since Lenovo would like to make use of telemetry in the future.  We will assume there are two possible telemetry states, Normal (N) and Abnormal (A).  See Appendix \ref{app:tm} for an example of how Normal/Abnormal states can be characterized once Lenovo has archived several months worth of data.
+We will include telemetry status in the MDP since Lenovo would like to make use of telemetry in the future.  We will assume there are two possible telemetry states, Normal (N) and Abnormal (A).  See Appendix \ref{app:TM} for an example of how Normal/Abnormal states can be characterized once Lenovo has archived several months worth of data.
 
 Therefore the possible combined states for the MDP are {(++,N), (++,A), (+,N), (+,A), (0,N), (0,A), (-,N), (-,A), (--,N), (--,A)}
 
@@ -301,7 +303,6 @@ knitr::kable(round(P1, digits=3), row.names=TRUE, caption = "Consumer, All State
 
 ```
 
-\newpage
 Next, we assume the action "Conduct Root Cause Analysis" reduces the probability of transitioning to Very_Low by $100p\%$ compared to "Do Nothing" if Telemetry is Abnormal and $75p\%$ if Telemetry is Normal (i.e., root cause analysis is more likely to succeed if there is abnormal telemetry data to troublehsoot).  The change in percentage is evenly distributed among the remaining 4 states.  For example, if $p=0.1$ then the transition matrix for ``Conduct Root Cause Analysis" is shown in Table \ref{tbl:P2}.  Note that only the rows which differ from Table \ref{tbl:P1} are displayed.
 
 
@@ -401,24 +402,22 @@ We assume rewards are of the form shown in Tables \ref{tbl:R1} and \ref{tbl:R2} 
 \label{tbl:R1}
 \end{table}
 
-If we assume $r1=10$, $r2=5$ and conducting a root cause analysis has cost $c=5$.  The resulting Rewards Matrices are shown in Tables \ref{tbl:Reward2} and \ref{tbl:Reward3}.
+We will assume $r1=10$, $r2=5$ and conducting a root cause analysis has cost $c=7$. Note: The combined reward matrices using these parameters can be found in Appendix \ref{app:Rewards}.
 
 
 \subsection{Result}
 
-Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]$ and a discount factor of $0.95$.  The results are listed in Table \ref{tbl:MDP}.  Conducting the root cause analysis is optimal _only_ if the NPS score is Very Low _and_ it is expected to reduce the probability of staying in the Very_Low state by 40% or more.  For all other conditions and states, the optimal policy is Do Nothing.   The R source code used to conduct this analysis is listed in Appendix \ref{app:MDP} and the values for reward, cost, discount factor and $p$ are parameters which can be easily modified by Lenovo.
+Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]$ and a discount factor of $0.95$.  The results as a function of $p$ are listed in Table \ref{tbl:MDP}, where "-" represents "Do Nothing" and "RC" represents "Conduct Root Cause Analysis".  The R source code used to conduct this analysis is listed in Appendix \ref{app:MDP} and the values for rewards, cost, and discount factor are parameters which can be easily modified by Lenovo.
 
 \begin{table}[h!]
 \caption{Optimal Policy as a Function of p}
 \centering
-\begin{tabular}{l|c|c|}
-\cline{2-3}
-\multicolumn{1}{c|}{}      & $p<0.4$ & $p \ge 0.4$ \\ \hline
-\multicolumn{1}{|l|}{Very Low}      & Do Nothing & Root Cause Analysis \\ \hline
-\multicolumn{1}{|l|}{Mod. Low}      & Do Nothing & Do Nothing \\ \hline
-\multicolumn{1}{|l|}{Normal}      & Do Nothing & Do Nothing \\ \hline
-\multicolumn{1}{|l|}{Mod. High}      & Do Nothing & Do Nothing \\ \hline
-\multicolumn{1}{|l|}{Very High}      & Do Nothing & Do Nothing \\ \hline
+\begin{tabular}{l|c|c|c|c|c|c|c|c|c|c|}
+\cline{2-11}
+\multicolumn{1}{c|}{} & - -, N & -, N & 0, N & +, N & ++, N & - -, A & -, A & 0, A & +, A & ++, A \\ \hline
+\multicolumn{1}{|l|}{$p \le 0.2$} & - & - & - & - & - & - & - & - & - & - \\ \hline
+\multicolumn{1}{|l|}{$p = 0.3$} & - & - & - & - & - & RC & - & - & - & - \\ \hline
+\multicolumn{1}{|l|}{$p \ge 0.4$} & RC & - & - & - & - & RC & - & - & - & - \\ \hline
 \end{tabular}
 \label{tbl:MDP}
 \end{table}
@@ -518,6 +517,52 @@ knitr::kable(P1,  row.names = TRUE)
 
 ```{r}
 knitr::kable(P2, row.names=TRUE, caption = "\\label{tab:action1_prob1} Consumer, Software Patch")
+
+```
+
+\clearpage
+
+\section{MDP Rewards Matrices}\label{app:Rewards}
+
+Assuming $r1=10$, $r2=5$ and $c=7$, the combined reward matrices for each action are as follows:
+
+```{r}
+###### Define Rewards Matrices ######
+# Select parameters
+r1 <- 10
+r2 <- 5
+cost <- 7
+# Do Nothing
+Rnps <- matrix(rep(c(-2*r1, -1*r1, 0, r1, 2*r1),n),
+               nrow=nrow(p.s),
+               byrow=TRUE)
+Rtel <- matrix(c(2*r2, r2, -r2, -2*r2), nrow=nrow(p.tel))
+
+R_A1 <- combine.matrix(Rnps, Rtel, TRUE)
+rownames(R_A1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
+colnames(R_A1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
+
+knitr::kable(R_A1, row.names=TRUE, caption = "Consumer, Rewards, Action = Do Nothing")
+```
+
+```{r}
+# Root Cause Analysis
+# Select parameters
+r1 <- 10
+r2 <- 5
+cost <- 7
+# Set cost to "infinity" for states where action is not available
+INF <- 9999
+R_A2 <- matrix(-INF, nrow=nrow(R_A1), ncol=ncol(R_A1))
+R_A2[1,] <- R_A1[1,] - cost
+R_A2[2,] <- R_A1[2,] - cost
+R_A2[6,] <- R_A1[6,] - cost
+R_A2[7,] <- R_A1[7,] - cost
+
+rownames(R_A2) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
+colnames(R_A2) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
+
+knitr::kable(R_A2[c(1,2,6,7),], row.names=TRUE, caption = "Consumer, Rewards, Action = Root Cause Analysis")
 
 ```
 
