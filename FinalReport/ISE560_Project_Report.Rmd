@@ -45,6 +45,15 @@ urlcolor: blue
 
 \section{Executive Summary}
 
+Our team was tasked with investigating methods for predicting Net Promoter Score (NPS) using customer sentiment, star rating and telemetry data.  First, we considered several approaches to developing a predictive model using various combinations of those predictors.  We ultimately determined two different linear models, one for the Consumer Segment and one for the Commercial Segment, resulted in the best predictions of the candidate approaches.  For the Consumer segment, we determined that the Series, Product Sentiment Index (PSI) and average star ratings were the most useful predictors.  For the Commercial Segment, Series and PSI (but not average star rating) were the most useful predictors.  Because Lenovo was able to provide only a small amount of telemetry data, we were not able to directly incorporate the information into the models.  However, even though there was a statistically significant relationship between NPS and the predictors previously mentioned, there is still significant variation in the NPS scores that is not accounted for by the model.  In other words, PSI, Series and average star rating only partially explain the observed NPS scores. We believe that if Lenovo is able to build up an archive of the telemetry data (e.g., 6-12 months worth) which is then incorporated into the model, that may help reduce the amount of unexplained variation in the NPS scores.
+
+Next we developed a framework for a Markov Decision Process (MDP) based on the predicted NPS score and categories of Normal vs. Abnormal telemetry activity (assuming that Lenovo will begin archiving the telemetry data).  We had to make many assumptions (e.g., potential actions Lenovo might take, the rewards/costs associated with those actions) in order to formulate the MDP.  Given all of these assumptions, the _specific_ results of the MDP are of less importance to Lenovo than the analysis process and the framework.  We have provided all of the souce code used to build and analyze the MDP in the Appendices, and all of the assumptions are parameters in the source code.  Our goal was to deliver a framework and tools that Lenovo could easily modify for future use. 
+
+Third, we analyzed the customer sentiment data...Shrikanth add stuff here...
+
+Based on our analysis, we conclude that there is some predictive value in the customer sentiment (PSI and star ratings) data.  However, there is still significant variation in NPS that is not accounted for in the models we developed.  We therefore recommend Lenovo begin archiving the telemetry data, and once Lenovo has 6-12 months of historical telemetry data available then build new models that incorporate the telemetry data as well.  We also recommend...Shrikanth add stuff here about sentiment...
+
+
 \clearpage
 
 \section{Introduction}
@@ -201,7 +210,7 @@ ggplot(aes(x=psi, y=nps, group=SeriesName)) +
 
 \section{Markov Decision Process}
 
-The next phase of our analysis developed a Markov decision process (MDP) to identify optimal policies based on customer sentiment or satisfaction.  Where Lenovo did not identify specific componenents (e.g., actions, rewards) necessary for the MDP, we will make assumptions and identify them as such.
+The next phase of our analysis developed a Markov decision process (MDP) to identify optimal policies based on customer sentiment or satisfaction.  Where Lenovo did not identify specific componenents (e.g., actions, rewards) necessary for the MDP, we will make assumptions and identify them as such.  For this section we will focus on the the MDP for the Consumer segment.  The same analysis process would apply equally to the Commercial segment.
 
 \subsection{States}\label{sec:statedef}
 
