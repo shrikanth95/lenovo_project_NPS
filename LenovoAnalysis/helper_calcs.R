@@ -142,7 +142,7 @@ NPSTransitions <- function(df, VERY_HIGH, MOD_HIGH, NORMAL, MOD_LOW)
 #
 # Combines two transition matrices
 #
-combine.matrix <- function(A,B) 
+combine.matrix <- function(A,B,add=FALSE) 
 {
   nA <- nrow(A)
   nB <- nrow(B)
@@ -155,7 +155,14 @@ combine.matrix <- function(A,B)
     {
       blk_row = (1+(row-1)*nA):(nA*(row))
       blk_col = (1+(col-1)*nA):(nA*(col))
-      tmp[blk_row, blk_col] <- A * B[row,col]
+      if (add)
+      {
+        tmp[blk_row, blk_col] <- A + B[row,col]
+      }
+      else
+      {
+        tmp[blk_row, blk_col] <- A * B[row,col]
+      }
     }
  
   }
