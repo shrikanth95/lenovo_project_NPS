@@ -49,7 +49,7 @@ Our team was tasked with investigating methods for predicting Net Promoter Score
 
 Next, we developed a framework for a Markov Decision Process (MDP) based on the predicted NPS score and categories of Normal vs. Abnormal telemetry activity (assuming that Lenovo will begin archiving the telemetry data).  We had to make many assumptions (e.g., potential actions Lenovo might take, the rewards/costs associated with those actions) in order to formulate the MDP.  Given all of these assumptions, the _specific_ results of the MDP are of less importance to Lenovo than the analysis process and the framework.  We have provided all of the source code used to build and analyze the MDP in the Appendices, and all of the assumptions are parameters in the source code.  Our goal was to deliver a framework and tools that Lenovo could easily modify for future use. 
 
-Finally, we identified the three products with the lowest average NPS score in each business segment.  The bottom three Consumer products are the Ideapad 110, the Yoga 710 and the Ideapad 120S; the bottom three Commercial products are the E585, E485 and E580.  Then we analyzed the customer sentiment data to identify the categories of customer sentiment with the strongest correlation to PSI for each of the lowest performing products.  Although the relevant categories differ among the six categories, there are a few categories which are common to more than one product.  These common categories include Battery, Memory and Display.  While we cannot conclude improvements in these categories _will_ improve PSI and NPS scores based on the data available (i.e., correlation does not imply causation), the strong correlation does justify Lenovo considering these categories as areas for potential improvement. 
+Finally, we identified the three products with the lowest average NPS score in each business segment.  The bottom three Consumer products are the Ideapad 110, the Yoga 710 and the Ideapad 120S; the bottom three Commercial products are the E585, E485 and E580.  Then we analyzed the customer sentiment data to identify the categories of customer sentiment with the strongest correlation to PSI for each of the lowest performing products.  Although the relevant categories differ among the six categories, there are a few categories which are common to more than one product.  These common categories include Battery, Memory and Display.  While we cannot conclude improvements in these categories will improve PSI and NPS scores based on the data available (i.e., correlation does not imply causation), the strong correlation does justify Lenovo considering these categories as areas for potential improvement. 
 
 \clearpage
 
@@ -127,6 +127,9 @@ all_consumer <- inner_join(psi, nps) %>%
   filter(occurs > 3) %>%
   drop_na()
 
+# Change SeriesName to factor
+#all_consumer$SeriesName <- factor(all_consumer$SeriesName)
+
 # Fit model without interaction term
 train.control <- trainControl(method = "repeatedcv", number = 10, repeats=3)
 
@@ -180,7 +183,7 @@ After model selection, we used k-fold cross validation to estimate the predictio
 \label{tbl:KFold}
 \end{table}
 
-It is perhaps easier to understand these results by comparing plots of observed versus predicted.  Figures \ref{fig:mdlConsumer} and \ref{fig:mdlComm} are scatterplots for the Consumer and Commercial data, respectively.  In both sets of plots, the grey points are the observed (NPS, PSI) scores, the grey line is the regression line for the marginal model $NPS = \beta_o + \beta_1 * PSI$ and the red dots are the _predicted values_ from equations (1) and (2) respectively.  While the predicted (red) points follow the general trend of the observed (grey) points, there is still significant variation that is not accounted for by the models.  If Lenovo started archiving the telemetry data, then new models incorporating the telemetry could be fit once several months of data is available; it is entirely possible incorporating telemetry data into the model could reduce the unaccounted for variation and give better predictions.
+It is perhaps easier to understand these results by comparing plots of observed versus predicted NPS.  Figures \ref{fig:mdlConsumer} and \ref{fig:mdlComm} are scatterplots for the Consumer and Commercial data, respectively.  In both sets of plots, the grey points are the observed (NPS, PSI) scores, the grey line is the regression line for the marginal model $NPS = \beta_o + \beta_1 * PSI$ and the red dots are the _predicted values_ from equations (1) and (2) respectively.  While the predicted (red) points follow the general trend of the observed (grey) points, there is still significant variation that is not accounted for by the models.  If Lenovo started archiving the telemetry data, then new models incorporating the telemetry could be fit once several months of data is available; it is entirely possible incorporating telemetry data into the model could reduce the unaccounted for variation and give better predictions.
 
 ```{r fig.cap="\\label{fig:mdlConsumer}Marginal Model Plots, Consumer PSI vs. NPS"}
 # Look at scatterplots fitted vs actual
@@ -206,9 +209,11 @@ ggplot(aes(x=psi, y=nps, group=SeriesName)) +
   facet_wrap(~SeriesName)
 ```
 
+Finally, Lenovo identified five products our model will be tested against: Yoga C930, Ideapad 330s, Yoga 730, Legion Y730 and T490.  The predicted NPS scores and both 95%  confidence and prediction intervals can be found in Appendix \ref{app:preds}.  A prediction interval is always wider than a confidence interval because it includes both the variation in the regression model and the variation in the error term.  However, the prediction interval is more relevant because Lenovo is interested in the predicted NPS score (as opposed to the predicted _mean_ NPS score in which case the confidence interval would be preferred).
+
 \section{Markov Decision Process}
 
-The next phase of our analysis developed a Markov decision process (MDP) to identify optimal policies based on customer sentiment or satisfaction.  Where Lenovo did not identify specific componenents (e.g., actions, rewards) necessary for the MDP, we will make assumptions and identify them as such.  For this section we will focus on the the MDP for the Consumer segment.  The same analysis process would apply equally to the Commercial segment.
+The next phase of our analysis developed a Markov decision process (MDP) to identify optimal policies based on customer sentiment or satisfaction.  Where Lenovo did not identify specific components (e.g., actions, rewards) necessary for the MDP, we will make assumptions and identify them as such.  For this section we will focus on the the MDP for the Consumer segment.  The same analysis process would apply equally to the Commercial segment.
 
 \subsection{States}\label{sec:statedef}
 
@@ -307,6 +312,8 @@ colnames(P1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0
 knitr::kable(round(P1, digits=3), row.names=TRUE, caption = "Consumer, All States, Action = Do Nothing  \\label{tbl:P1}")
 
 ```
+
+\newpage
 
 Next, we assume the action "Conduct Root Cause Analysis" reduces the probability of transitioning to Very_Low by $100p\%$ compared to "Do Nothing" if Telemetry is Abnormal and $75p\%$ if Telemetry is Normal (i.e., root cause analysis is more likely to succeed if there is abnormal telemetry data to troublehsoot).  The change in percentage is evenly distributed among the remaining 4 states.  For example, if $p=0.1$ then the transition matrix for ``Conduct Root Cause Analysis" is shown in Table \ref{tbl:P2}.  Note that only the rows which differ from Table \ref{tbl:P1} are displayed.
 
@@ -441,7 +448,7 @@ neg.psi2 <- overall.study2[order(overall.study2$psi.all),c('Category', 'SeriesNa
 
 ```
 
-Second, we isolate on specific categories and observe the PSI scores in the $very$ $low$ state over the entire dataset in the Appendix in Table.\ref{tab:neg.psi}.  The final list of categories that needs to addressed can be deduced by sorting Table.\ref{tab:neg.psi} based on the correlation. The final list of categories that would need improvements are given in the Appendix in Table.\ref{tab:improvements}.  A similar analysis is done for Commercial series and the suggested improvements are given in the Appendix in Table.\ref{tab:improvements2}.
+Second, we isolate on specific categories and observe the PSI scores in the $very$ $low$ state over the entire dataset in the Appendix in Table \ref{tab:neg.psi}.  The final list of categories that needs to addressed can be deduced by sorting Table \ref{tab:neg.psi} based on the correlation. The final list of categories that would need improvements are given in the Appendix in Table \ref{tab:improvements}.  A similar analysis is done for Commercial series and the suggested improvements are given in the Appendix in Table \ref{tab:improvements2}.
 
 ```{r}
 imp <- neg.psi[order(neg.psi$correlation,decreasing = TRUE),] %>% filter(correlation > 0.5) %>% mutate(correlation = round(correlation,digits = 2),
@@ -462,9 +469,9 @@ bottom2 <- overall.study2 %>% filter(SeriesName ==  "E SERIES"|SeriesName ==  "T
 
 ```
 
-Further, this analysis also allows us to pick categories that lead to low PSI an pNPS scores.  The bottom three consumer products in terms of total pNPS include Ideapad 120s, Ideacentre 310 and Ideapad 110.  Table.\ref{tab:con_lownps} shows that reliability, power supply, network and Ports/Slots require attention for the Ideapad 100 series. For Ideacentre 300 Series, there was not enough data to observe any meaningfull correlation of categories to pNPS. Further, the existing PSI scores were generally obsered to be in the Normal range.
+Further, this analysis also allows us to pick categories that lead to low PSI an pNPS scores.  The bottom three consumer products in terms of total pNPS include Ideapad 120s, Ideacentre 310 and Ideapad 110.  Table \ref{tab:con_lownps} shows that reliability, power supply, network and Ports/Slots require attention for the Ideapad 100 series. For Ideacentre 300 Series, there was not enough data to observe any meaningfull correlation of categories to pNPS. Further, the existing PSI scores were generally obsered to be in the Normal range.
 
-The bottom three commercial products in terms of total pNPS include products from the E Series and Thinkpad P series.  Table.\ref{tab:com_lownps} shows that drivers require attention for P series and fan, network card and general service required attention for E series.  
+The bottom three commercial products in terms of total pNPS include products from the E Series and Thinkpad P series.  Table \ref{tab:com_lownps} shows that drivers require attention for P series and fan, network card and general service required attention for E series.  
 
 \section{Conclusion and Recommendations}
 
@@ -640,6 +647,154 @@ knitr::kable(data.frame(ncomm, unname(beta_coeff1), unname(beta_coeff2)),
 
 \clearpage
 
+\section{Predictions for Key Products}\label{app:preds}
+
+The following tables list predicted NPS (pNPS) scores, 95% confidence interval bounds and 95% prediction interval bounds for five key products previously identified by Lenovo.
+
+\subsection{Yoga C730}
+```{r}
+# Can't get prediction interval from caret so refit directly with lm
+pmdl2 <- lm(nps ~ SeriesName + psi + stars, data=all_consumer)
+
+#### YOGA C930 ###
+yogac930 <- sentiment.consumer.all %>%
+  filter(ProductName == "YOGA C930") %>%
+  mutate(SeriesName = "YOGA") %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  calcPSI() %>%
+  ungroup()
+
+yogac930.pred <- predict(pmdl2, newdata=yogac930, interval="prediction")
+yogac930.conf <- predict(pmdl2, newdata=yogac930, interval="confidence")
+
+yogac930.summ <- cbind(Date = yogac930$date,
+                       PSI = round(yogac930$psi, digits=2),
+                       data.frame(pNPS = round(yogac930.conf[,1], digits=2),
+                                            CI.lower = round(yogac930.conf[,2], digits=2),
+                                            CI.upper = round(yogac930.conf[,3], digits=2),
+                                            PI.lower = round(yogac930.pred[,2], digits=2),
+                                            PI.upper = round(yogac930.pred[,3], digits=2))) 
+
+knitr::kable(yogac930.summ, caption="Yoga C930 Predictions and 95% Prediction Interval")
+```
+
+\subsection{Ideapad 330S}
+```{r}
+### Ideapad 330 ###
+ideapad330 <- sentiment.consumer.all %>%
+  filter(ProductName == "IDEAPAD 330S 14" |
+           ProductName == "IDEAPAD 330S 15" |
+           ProductName == "IDEAPAD 330S GENERAL") %>%
+  mutate(SeriesName = "IDEAPAD 300 SERIES") %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  calcPSI() %>%
+  ungroup()
+
+ideapad330.pred <- predict(pmdl2, newdata=ideapad330, interval="prediction")
+ideapad330.conf <- predict(pmdl2, newdata=ideapad330, interval="confidence")
+
+ideapad330.summ <- cbind(Date = ideapad330$date,
+                       PSI = round(ideapad330$psi, digits=2),
+                       data.frame(pNPS = round(ideapad330.conf[,1], digits=2),
+                                            CI.lower = round(ideapad330.conf[,2], digits=2),
+                                            CI.upper = round(ideapad330.conf[,3], digits=2),
+                                            PI.lower = round(ideapad330.pred[,2], digits=2),
+                                            PI.upper = round(ideapad330.pred[,3], digits=2))) 
+
+knitr::kable(ideapad330.summ, caption="Ideapad 330 Predictions and 95% Prediction Interval")
+```
+
+\subsection{Yoga 730}
+```{r}
+### Yoga 730 ###
+
+yoga730 <- sentiment.consumer.all %>%
+  filter(ProductName == "YOGA 730 13" |
+           ProductName == "YOGA 730 15" |
+           ProductName == "YOGA 730 GENERAL") %>%
+  mutate(SeriesName = "YOGA") %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  calcPSI() %>%
+  ungroup()
+
+yoga730.pred <- predict(pmdl2, newdata=yoga730, interval="prediction")
+yoga730.conf <- predict(pmdl2, newdata=yoga730, interval="confidence")
+
+yoga730.summ <- cbind(Date = yoga730$date,
+                       PSI = round(yoga730$psi, digits=2),
+                       data.frame(pNPS = round(yoga730.conf[,1], digits=2),
+                                            CI.lower = round(yoga730.conf[,2], digits=2),
+                                            CI.upper = round(yoga730.conf[,3], digits=2),
+                                            PI.lower = round(yoga730.pred[,2], digits=2),
+                                            PI.upper = round(yoga730.pred[,3], digits=2))) 
+
+knitr::kable(yoga730.summ, caption="Yoga 730 Predictions and 95% Prediction Interval")
+```
+
+\subsection{Legion Y730}
+```{r}
+### Legion Y730 ###
+
+legiony730 <- sentiment.consumer.all %>%
+  filter(ProductName == "LEGION Y730 15" |
+           ProductName == "LEGION Y730 17" |
+           ProductName == "LEGION Y730 GENERAL") %>%
+  mutate(SeriesName = "LEGION (Y SERIES)") %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  calcPSI() %>%
+  ungroup()
+
+legiony730.pred <- predict(pmdl2, newdata=legiony730, interval="prediction")
+legiony730.conf <- predict(pmdl2, newdata=legiony730, interval="confidence")
+
+legiony730.summ <- cbind(Date = legiony730$date,
+                       PSI = round(legiony730$psi, digits=2),
+                       data.frame(pNPS = round(legiony730.conf[,1], digits=2),
+                                            CI.lower = round(legiony730.conf[,2], digits=2),
+                                            CI.upper = round(legiony730.conf[,3], digits=2),
+                                            PI.lower = round(legiony730.pred[,2], digits=2),
+                                            PI.upper = round(legiony730.pred[,3], digits=2))) 
+
+knitr::kable(legiony730.summ, caption="Legion Y730 Predictions and 95% Prediction Interval")
+
+```
+
+\subsection{T490}
+
+```{r}
+pmdl4 <- lm(nps ~ SeriesName*psi, data=all_comm)
+               
+### Legion Y730 ###
+
+t490 <- sentiment.comm.all %>%
+  filter(ProductName == "T490") %>%
+  mutate(SeriesName = "T SERIES") %>%
+  group_by(SeriesName,
+           date = floor_date(as.Date(Comment.Date, format = "%m/%d/%y"), unit = "month")) %>%
+  calcPSI() %>%
+  ungroup()
+
+t490.pred <- predict(pmdl4, newdata=t490, interval="prediction")
+t490.conf <- predict(pmdl4, newdata=t490, interval="confidence")
+
+t490.summ <- cbind(Date = t490$date,
+                       PSI = round(t490$psi, digits=2),
+                       data.frame(pNPS = round(t490.conf[,1], digits=2),
+                                            CI.lower = round(t490.conf[,2], digits=2),
+                                            CI.upper = round(t490.conf[,3], digits=2),
+                                            PI.lower = round(t490.pred[,2], digits=2),
+                                            PI.upper = round(t490.pred[,3], digits=2)))
+
+knitr::kable(t490.summ, caption="T490 Predictions and 95% Prediction Interval")
+
+```
+
+\clearpage
+
 \section{MDP Rewards Matrices}\label{app:Rewards}
 
 Assuming $r1=10$, $r2=5$ and $c=7$, the combined reward matrices for each action are as follows:
@@ -731,13 +886,11 @@ knitr::kable(p.tel ,  caption = "A possible telemetry transtion matrix from ",  
 
 The final state matrix $P$ would be a combination of $P_S$ and $P_T$ as shown in Section \ref{sec:transitions}.
 
-
-
 \section{Customer Sentiment Analysis}
 
-## Category-wise Correlation Between NPS and PSI 
+\subsection{Category-wise Correlation Between NPS and PSI}
 
-```{r eval=TRUE, fig.cap = "\\label{fig:neg-corr} Correlation between NPS and PSI for Customer Series", fig.width = 8}
+```{r eval=TRUE, fig.cap = "\\label{fig:neg-corr} Correlation between NPS and PSI for Customer Series", fig.width = 8, fig.pos="H"}
 # slice.low %>% ggplot(aes(x = psi, y = nps, group = SeriesName))+geom_point()+geom_smooth(method="lm", se=FALSE, color="darkgrey")+facet_wrap(.~Category)
 
 slice.high %>% ggplot(aes(x = psi, y = nps, group = SeriesName))+geom_point()+theme(legend.position = "none")+geom_smooth(method="lm", se=FALSE, color="darkgrey")+facet_wrap(.~Category)+xlab("PSI")+ylab("pNPS")
@@ -754,7 +907,7 @@ slice.high2 %>% ggplot(aes(x = psi, y = nps, group = SeriesName))+geom_point()+t
 ```
 
 
-## Summary of Correlations
+\subsection{Summary of Correlations}
 
 ```{r, eval=TRUE}
 high <- summary.cat %>% filter(correlation >0.3) %>% group_by(SeriesName) %>% summarise(rel.high = n())
@@ -763,7 +916,7 @@ summary = merge(high, low, by = "SeriesName")
 # dcast(slice.high[,c(1,3)], formula = Category~SeriesName)
 # high.cor.list <-  as.dict high.corr[,c(-3)]# dcast(,formula = SeriesName~Category)
 
-knitr::kable(summary,  caption = "\\label{tab:corr_category} Category wise Consumer Survey-Sentiment correlation ($\\rho$)",  row.names = FALSE,col.names = c("Series", "$\\rho\\ge 0.3$", "$\\rho$ < -0.3"))
+knitr::kable(summary,  caption = "\\label{tab:corr_category} Category-Sentiment Correlation for Consumer Series ($\\rho$)",  row.names = FALSE,col.names = c("Series", "$\\rho\\ge 0.3$", "$\\rho$ < -0.3"))
 ```
 
 ```{r, eval=TRUE}
@@ -773,36 +926,36 @@ summary = merge(high, low, by = "SeriesName")
 # dcast(slice.high[,c(1,3)], formula = Category~SeriesName)
 # high.cor.list <-  as.dict high.corr[,c(-3)]# dcast(,formula = SeriesName~Category)
 
-knitr::kable(summary,  caption = "\\label{tab:corr_category2} Category wise Commercial Survey-Sentiment correlation ($\\rho$)",  row.names = FALSE,col.names = c("Series", "$\\rho\\ge 0.3$", "$\\rho$ < -0.3"))
+knitr::kable(summary,  caption = "\\label{tab:corr_category2} Category-Sentiment Correlation for Commercial Series ($\\rho$)",  row.names = FALSE,col.names = c("Series", "$\\rho\\ge 0.3$", "$\\rho$ < -0.3"))
 ```
 
-## All Categories with Negative PSI 
+\subsection{Categories with Negative PSI}
 
-```{r}
-knitr::kable(neg.psi,col.names = c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:neg.psi} Categories the significantly correlate with NPS scores for Consumer Series ($\\rho$)",  row.names = FALSE)
+```{r fig.pos="H"}
+knitr::kable(neg.psi,col.names = c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:neg.psi} Categories with strong correlation to NPS scores for Consumer Series ($\\rho$)",  row.names = FALSE)
 ```
 
 ```{r}
 knitr::kable(neg.psi2,col.names = c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:neg.psi2} Categories that significantly correlate with NPS scores for Commercial Series($\\rho$)",  row.names = FALSE)
 ```
 
-## Relevant categories that that positively correlate with NPS scores
+\subsection{Relevant Categories that Positively Correlate with NPS Scores}
 
 ```{r}
-knitr::kable(imp,col.names =  c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:improvements} Categories in Consumer Series that need improvements")
+knitr::kable(imp,col.names =  c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:improvements} Categories for Potential Improvement, Consumer Series")
 
-knitr::kable(imp2,col.names =  c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:improvements2} Categories in Commercial Series that need improvements")
+knitr::kable(imp2,col.names =  c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:improvements2} Categories for Potential Improvement, Commercial Series")
 
 ```
 
 
-## Categories for Potential Improvement
+\subsection{Categories for Potential Improvement}
 
 ```{r}
 bottom <- overall.study %>% filter(SeriesName ==  "IDEAPAD 100 SERIES"|SeriesName ==  "IDEACENTRE 300 SERIES",correlation>0,psi.all<8)
-knitr::kable(bottom[,c(1,4,8)], col.names = c("Category","$\\rho$","PSI"), caption = "\\label{tab:con_lownps} Categories that need to be improved For Ideapad 100 Series",  row.names = FALSE)
+knitr::kable(bottom[,c(1,4,8)], col.names = c("Category","$\\rho$","PSI"), caption = "\\label{tab:con_lownps} Categories for Potential Improvement, Ideapad 100 Series",  row.names = FALSE)
 bottom2 <- overall.study2 %>% filter(SeriesName ==  "E SERIES"|SeriesName ==  "THINKPAD P SERIES",correlation>0,psi.all<8)
-knitr::kable(bottom2[,c(1,2,4,8)], col.names = c("Category","Series","$\\rho$","PSI"), caption = "\\label{tab:com_lownps} Categories that need to be improved For E and P series",  row.names = FALSE)
+knitr::kable(bottom2[,c(1,2,4,8)], col.names = c("Category","Series","$\\rho$","PSI"), caption = "\\label{tab:com_lownps} Categories for Potential Improvement, E and P series",  row.names = FALSE)
 
 ```
 
