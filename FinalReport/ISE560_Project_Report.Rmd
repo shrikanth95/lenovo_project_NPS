@@ -45,14 +45,11 @@ urlcolor: blue
 
 \section{Executive Summary}
 
-Our team was tasked with investigating methods for predicting Net Promoter Score (NPS) using customer sentiment, star rating and telemetry data.  First, we considered several approaches to developing a predictive model using various combinations of those predictors.  We ultimately determined two different linear models, one for the Consumer Segment and one for the Commercial Segment, which resulted in the best predictions of the candidate approaches.  For the Consumer segment, we determined that the Series, Product Sentiment Index (PSI) and average star ratings were the most useful predictors.  For the Commercial Segment, Series and PSI (but not average star rating) were the most useful predictors.  Because Lenovo was able to provide only a small amount of telemetry data, we were not able to directly incorporate the information into the models.  However, even though there was a statistically significant relationship between NPS and the predictors previously mentioned, there is still significant variation in the NPS scores that are not accounted for by the model.  In other words, PSI, Series and average star rating only partially explain the observed NPS scores. We believe that if Lenovo can build up an archive of the telemetry data (e.g., 6-12 months worth) which is then incorporated into the model, that may help reduce the amount of unexplained variation in the NPS scores.
+Our team was tasked with investigating methods for predicting Net Promoter Score (NPS) using customer sentiment, star rating and telemetry data.  First, we considered several approaches to developing a predictive model using various combinations of those predictors.  We ultimately determined two different linear models, one for the Consumer Segment and one for the Commercial Segment, resulted in the best predictions of the candidate approaches.  For the Consumer segment, we determined that the Series, Product Sentiment Index (PSI) and average star ratings were the most useful predictors.  For the Commercial Segment, Series and PSI (but not average star rating) were the most useful predictors.  Because Lenovo was able to provide only a small amount of telemetry data, we were not able to directly incorporate the information into the models.  However, even though there was a statistically significant relationship between NPS and the predictors previously mentioned, there is still significant variation in the NPS scores that are not accounted for by the model.  In other words, PSI, Series and average star rating only partially explain the observed NPS scores. We believe that if Lenovo can build up an archive of the telemetry data (e.g., 6-12 months worth) which is then incorporated into the model, that may help reduce the amount of unexplained variation in the NPS scores.
 
 Next, we developed a framework for a Markov Decision Process (MDP) based on the predicted NPS score and categories of Normal vs. Abnormal telemetry activity (assuming that Lenovo will begin archiving the telemetry data).  We had to make many assumptions (e.g., potential actions Lenovo might take, the rewards/costs associated with those actions) in order to formulate the MDP.  Given all of these assumptions, the _specific_ results of the MDP are of less importance to Lenovo than the analysis process and the framework.  We have provided all of the source code used to build and analyze the MDP in the Appendices, and all of the assumptions are parameters in the source code.  Our goal was to deliver a framework and tools that Lenovo could easily modify for future use. 
 
-Third, we analyzed the customer sentiment in order to identify series level categories that would need to be improved in order to maximise the pNPS scores.  This was shortlisted based on the first isolating categories that temporally correlated with pNPS scores.  Finally, the overall PSI was calculated for each Category-Series pair and sorted based on correlation and the PSI score.   We then identify categories that would need improvement under each category.
-
-Based on our analysis, we conclude that there is some predictive value in the customer sentiment (PSI and star ratings) data.  However, there is still significant variation in NPS that is not accounted for in the models we developed.  We, therefore, recommend Lenovo begin archiving the telemetry data, and once Lenovo has 6-12 months of historical telemetry data available then build new models that incorporate the telemetry data as well.  We also present a framework for exploiting the large volume of sentiment data to identify potential improvements on the series level.  In order to identify meaningful correlation in PSI and pNPS for each product, it is advisable to have lower bounds on the sentiment observations at least on the series level.
-
+Finally, we identified the three products with the lowest average NPS score in each business segment.  The bottom three Consumer products are the Ideapad 110, the Yoga 710 and the Ideapad 120S; the bottom three Commercial products are the E585, E485 and E580.  Then we analyzed the customer sentiment data to identify the categories of customer sentiment with the strongest correlation to PSI for each of the lowest performing products.  Although the relevant categories differ among the six categories, there are a few categories which are common to more than one product.  These common categories include Battery, Memory and Display.  While we cannot conclude improvements in these categories _will_ improve PSI and NPS scores based on the data available (i.e., correlation does not imply causation), the strong correlation does justify Lenovo considering these categories as areas for potential improvement. 
 
 \clearpage
 
@@ -185,7 +182,7 @@ After model selection, we used k-fold cross validation to estimate the predictio
 
 It is perhaps easier to understand these results by comparing plots of observed versus predicted.  Figures \ref{fig:mdlConsumer} and \ref{fig:mdlComm} are scatterplots for the Consumer and Commercial data, respectively.  In both sets of plots, the grey points are the observed (NPS, PSI) scores, the grey line is the regression line for the marginal model $NPS = \beta_o + \beta_1 * PSI$ and the red dots are the _predicted values_ from equations (1) and (2) respectively.  While the predicted (red) points follow the general trend of the observed (grey) points, there is still significant variation that is not accounted for by the models.  If Lenovo started archiving the telemetry data, then new models incorporating the telemetry could be fit once several months of data is available; it is entirely possible incorporating telemetry data into the model could reduce the unaccounted for variation and give better predictions.
 
-```{r fig.cap="\\label{fig:mdlConsumer}Marginal Model Plots, Consumer NPS vs. PSI"}
+```{r fig.cap="\\label{fig:mdlConsumer}Marginal Model Plots, Consumer PSI vs. NPS"}
 # Look at scatterplots fitted vs actual
 
 cbind(all_consumer, 
@@ -197,7 +194,7 @@ ggplot(aes(x=psi, y=nps, group=SeriesName)) +
   facet_wrap(~SeriesName)
 ```
 
-```{r fig.cap="\\label{fig:mdlComm}Marginal Model Plots, Commercial NPS vs. PSI"}
+```{r fig.cap="\\label{fig:mdlComm}Marginal Model Plots, Commercial PSI vs. NPS"}
 # Look at scatterplots fitted vs actual
 
 cbind(all_comm, 
@@ -429,7 +426,7 @@ Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0
 \label{tbl:MDP}
 \end{table}
 
-\section{Recommendations using Customer Sentiment Analysis}
+\section{Customer Sentiment Analysis}
 
 In order to identify areas that are faring well with the population and those that need improvement, it is useful to tap into large datasets for information on potential areas of improvemnt.  We analyze the categories in the sentiment data as a proxy for pNPS scores.  
 
@@ -486,29 +483,6 @@ Our primary recommendation is that Lenovo starts archiving their telemetry data.
 \clearpage
 
 \appendix
-
-\section{Coefficients for Recommended Linear Models}\label{app:coeff}
-
-
-```{r}
-# Consumer
-beta_coeff <- round(mdl2$finalModel$coefficients[2:14], digits=2)
-nconsumer <- sub("SeriesName", "", names(beta_coeff))
-knitr::kable(data.frame(nconsumer, unname(beta_coeff)),
-             col.names = c("Consumer Series", "$\\beta_1$"),
-             caption = "Coefficients for Consumer Model") 
-
-# Commercial
-beta_coeff1 <- round(mdl4$finalModel$coefficients[2:12], digits=2)
-beta_coeff2 <- round(mdl4$finalModel$coefficients[14:24], digits=2)
-ncomm <- sub("SeriesName", "", names(beta_coeff1))
-knitr::kable(data.frame(ncomm, unname(beta_coeff1), unname(beta_coeff2)), 
-             col.names = c("Commercial Series", "$\\beta_1$", "$\\beta_2$"),
-             caption = "Coefficients for Commercial Model") 
-
-```
-
-\clearpage
 
 \section{Alternative Model Approach}\label{app:PredModel}
 
@@ -643,6 +617,29 @@ The F-statistic comparing the full and restricted models is 1.3025 with 1 and 10
 
 \clearpage
 
+\section{Coefficients for Recommended Linear Models}\label{app:coeff}
+
+
+```{r}
+# Consumer
+beta_coeff <- round(mdl2$finalModel$coefficients[2:14], digits=2)
+nconsumer <- sub("SeriesName", "", names(beta_coeff))
+knitr::kable(data.frame(nconsumer, unname(beta_coeff)),
+             col.names = c("Consumer Series", "$\\beta_1$"),
+             caption = "Coefficients for Consumer Model") 
+
+# Commercial
+beta_coeff1 <- round(mdl4$finalModel$coefficients[2:12], digits=2)
+beta_coeff2 <- round(mdl4$finalModel$coefficients[14:24], digits=2)
+ncomm <- sub("SeriesName", "", names(beta_coeff1))
+knitr::kable(data.frame(ncomm, unname(beta_coeff1), unname(beta_coeff2)), 
+             col.names = c("Commercial Series", "$\\beta_1$", "$\\beta_2$"),
+             caption = "Coefficients for Commercial Model") 
+
+```
+
+\clearpage
+
 \section{MDP Rewards Matrices}\label{app:Rewards}
 
 Assuming $r1=10$, $r2=5$ and $c=7$, the combined reward matrices for each action are as follows:
@@ -736,11 +733,11 @@ The final state matrix $P$ would be a combination of $P_S$ and $P_T$ as shown in
 
 
 
-\section{Recommendation Analysis}
+\section{Customer Sentiment Analysis}
 
-## Category wise correlation between pNPS and PSI 
+## Category-wise Correlation Between NPS and PSI 
 
-```{r eval=TRUE, fig.cap = "\\label{fig:neg-corr} Correlation between pNPS and PSI for Customer Series", fig.width = 8}
+```{r eval=TRUE, fig.cap = "\\label{fig:neg-corr} Correlation between NPS and PSI for Customer Series", fig.width = 8}
 # slice.low %>% ggplot(aes(x = psi, y = nps, group = SeriesName))+geom_point()+geom_smooth(method="lm", se=FALSE, color="darkgrey")+facet_wrap(.~Category)
 
 slice.high %>% ggplot(aes(x = psi, y = nps, group = SeriesName))+geom_point()+theme(legend.position = "none")+geom_smooth(method="lm", se=FALSE, color="darkgrey")+facet_wrap(.~Category)+xlab("PSI")+ylab("pNPS")
@@ -748,7 +745,7 @@ slice.high %>% ggplot(aes(x = psi, y = nps, group = SeriesName))+geom_point()+th
 
 ```
 
-```{r eval=TRUE, fig.cap = "\\label{fig:neg-corr2} Correlation between pNPS and PSI for Commercial Series", fig.width = 8}
+```{r eval=TRUE, fig.cap = "\\label{fig:neg-corr2} Correlation between NPS and PSI for Commercial Series", fig.width = 8}
 # slice.low %>% ggplot(aes(x = psi, y = nps, group = SeriesName))+geom_point()+geom_smooth(method="lm", se=FALSE, color="darkgrey")+facet_wrap(.~Category)
 
 slice.high2 %>% ggplot(aes(x = psi, y = nps, group = SeriesName))+geom_point()+theme(legend.position = "none")+geom_smooth(method="lm", se=FALSE, color="darkgrey")+facet_wrap(.~Category)+xlab("PSI")+ylab("pNPS")
@@ -757,7 +754,7 @@ slice.high2 %>% ggplot(aes(x = psi, y = nps, group = SeriesName))+geom_point()+t
 ```
 
 
-## Summary of correlations
+## Summary of Correlations
 
 ```{r, eval=TRUE}
 high <- summary.cat %>% filter(correlation >0.3) %>% group_by(SeriesName) %>% summarise(rel.high = n())
@@ -779,7 +776,7 @@ summary = merge(high, low, by = "SeriesName")
 knitr::kable(summary,  caption = "\\label{tab:corr_category2} Category wise Commercial Survey-Sentiment correlation ($\\rho$)",  row.names = FALSE,col.names = c("Series", "$\\rho\\ge 0.3$", "$\\rho$ < -0.3"))
 ```
 
-## All Categories with negative PSI 
+## All Categories with Negative PSI 
 
 ```{r}
 knitr::kable(neg.psi,col.names = c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:neg.psi} Categories the significantly correlate with NPS scores for Consumer Series ($\\rho$)",  row.names = FALSE)
@@ -789,7 +786,7 @@ knitr::kable(neg.psi,col.names = c("Category","Series", "$\\rho$","PSI"), captio
 knitr::kable(neg.psi2,col.names = c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:neg.psi2} Categories that significantly correlate with NPS scores for Commercial Series($\\rho$)",  row.names = FALSE)
 ```
 
-## Summary of all relevant categories that need to be addressed that positively impact pNPS scores
+## Relevant categories that that positively correlate with NPS scores
 
 ```{r}
 knitr::kable(imp,col.names =  c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:improvements} Categories in Consumer Series that need improvements")
@@ -799,7 +796,7 @@ knitr::kable(imp2,col.names =  c("Category","Series", "$\\rho$","PSI"), caption 
 ```
 
 
-## Categories that need mprovement for bottom Series with low pNPS scores
+## Categories for Potential Improvement
 
 ```{r}
 bottom <- overall.study %>% filter(SeriesName ==  "IDEAPAD 100 SERIES"|SeriesName ==  "IDEACENTRE 300 SERIES",correlation>0,psi.all<8)
@@ -809,22 +806,3 @@ knitr::kable(bottom2[,c(1,2,4,8)], col.names = c("Category","Series","$\\rho$","
 
 ```
 
-
-
-\clearpage
-
-\section{MDP Source Code}\label{app:MDP}
-
-\lstinputlisting{../LenovoAnalysis/MDP_final.R}
-
-\clearpage
-
-\section{Additional R code}
-
-\subsection{data\_prep.R}
-
-\lstinputlisting{../LenovoAnalysis/data_prep.R}
-
-\subsection{helper\_calcs.R}
-
-\lstinputlisting{../LenovoAnalysis/helper_calcs.R}
