@@ -676,7 +676,7 @@ yogac930.summ <- cbind(Date = yogac930$date,
                                             PI.lower = round(yogac930.pred[,2], digits=2),
                                             PI.upper = round(yogac930.pred[,3], digits=2))) 
 
-knitr::kable(yogac930.summ, caption="Yoga C930 Predictions and 95% Prediction Interval")
+knitr::kable(yogac930.summ, caption="Yoga C930 Predictions, 95% Confidence and Prediction Intervals")
 ```
 
 \subsection{Ideapad 330S}
@@ -703,7 +703,7 @@ ideapad330.summ <- cbind(Date = ideapad330$date,
                                             PI.lower = round(ideapad330.pred[,2], digits=2),
                                             PI.upper = round(ideapad330.pred[,3], digits=2))) 
 
-knitr::kable(ideapad330.summ, caption="Ideapad 330 Predictions and 95% Prediction Interval")
+knitr::kable(ideapad330.summ, caption="Ideapad 330 Predictions, 95% Confidence and Prediction Intervals")
 ```
 
 \subsection{Yoga 730}
@@ -731,7 +731,7 @@ yoga730.summ <- cbind(Date = yoga730$date,
                                             PI.lower = round(yoga730.pred[,2], digits=2),
                                             PI.upper = round(yoga730.pred[,3], digits=2))) 
 
-knitr::kable(yoga730.summ, caption="Yoga 730 Predictions and 95% Prediction Interval")
+knitr::kable(yoga730.summ, caption="Yoga 730 Predictions, 95% Confidence and Prediction Intervals")
 ```
 
 \subsection{Legion Y730}
@@ -759,7 +759,7 @@ legiony730.summ <- cbind(Date = legiony730$date,
                                             PI.lower = round(legiony730.pred[,2], digits=2),
                                             PI.upper = round(legiony730.pred[,3], digits=2))) 
 
-knitr::kable(legiony730.summ, caption="Legion Y730 Predictions and 95% Prediction Interval")
+knitr::kable(legiony730.summ, caption="Legion Y730 Predictions, 95% Confidence and Prediction Intervals")
 
 ```
 
@@ -789,7 +789,7 @@ t490.summ <- cbind(Date = t490$date,
                                             PI.lower = round(t490.pred[,2], digits=2),
                                             PI.upper = round(t490.pred[,3], digits=2)))
 
-knitr::kable(t490.summ, caption="T490 Predictions and 95% Prediction Interval")
+knitr::kable(t490.summ, caption="T490 Predictions, 95% Confidence and Prediction Intervals")
 
 ```
 
