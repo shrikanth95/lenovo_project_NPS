@@ -93,7 +93,7 @@ library(tidyverse)
 #library(kableExtra)
 library(car)
 library(caret)
-
+library(pander)
 source("../src_lenovo_project.R")
 source("../LenovoAnalysis/data_prep.R")
 source("../LenovoAnalysis/helper_calcs.R")
@@ -435,43 +435,51 @@ Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0
 
 \section{Customer Sentiment Analysis}
 
-In order to identify areas that are faring well with the population and those that need improvement, it is useful to tap into large datasets for information on potential areas of improvemnt.  We analyze the categories in the sentiment data as a proxy for pNPS scores.  
+In order to identify areas that are faring well with the population and those that need improvement, it is useful to tap into large datasets for information on potential areas of improvemnt.  We first identify product-category pairs that correlate with NPS with a correlation of 0.3. Figures.\ref{fig:neg-corr} and \ref{fig:neg-corr2} highlight the categories that correlate with NPS.  For Consumer products, lowest NPS was observed for Ideapad 110, the Yoga 710 and the Ideapad 120S; for Commercial products, the lowest was E585, E485 and E580. The recommendations are listed in Fig.\ref{fig:recom}.
 
-First, we start by observing the temporal correlation $\rho$ between PSI scores and pNPS when the former is conditioned on both categories and series.  It is observed that the PSI associated with categories listed in Fig.\ref{fig:neg-corr} positively correlate with pNPS timeseries.  Table \ref{tab:corr_category}, highlights the number of categories that correlate non-trivially for each series in the consumer group.  Each PSI/pNPS score was calculated over a period of 1 month.  Assuming pNPS scores are true representations of the user perception, understanding correlation with PSI helps in setting a baseline for comparing againts categories that need improvement.  Categories that correlate negatively with pNPS scores can be considred as false postive indicators.
+```{r,  eval=TRUE, fig.cap = "\\label{fig:recom} Summary of recommendations", fig.width = 8, fig.pos="H"}
+## Sentiment of consumer products
+psi.study <- sentiment.consumer %>%
+  mutate(ProductName = I(toupper(as.character(Product)))) %>%  
+  group_by(Category) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE"), total = n()) %>%
+  mutate(psi.all = 100 * (pos - neg)/(pos +  neg)) %>% ungroup() %>% drop_na() %>% filter(total>50)
 
-```{r}
-overall.study <- merge(summary.cat, psi.study,by = "Category")
-neg.psi <- overall.study[order(overall.study$psi.all),c('Category', 'SeriesName', 'correlation',"psi.all")] %>% filter(correlation!=0&psi.all<8)
+nps.study <- survey.consumer%>%
+  mutate(ProductName = I(toupper(as.character(Product))), 
+         SeriesName = I(toupper(as.character(Series)))) %>%
+  mutate(NPS = as.numeric(as.character(Product.NPS))) %>% group_by(ProductName) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total) %>%  ungroup() %>% drop_na() %>% filter(total>50)
+rel.prod = nps.study[order(nps.study$nps)[1:3],c(1,5)]
+# merge(summary.cat,rel.prod,by = "ProductName") %>% filter (correlation>0.3)
 
-overall.study2 <- merge(summary.cat2, psi.study2,by = "Category")
-neg.psi2 <- overall.study2[order(overall.study2$psi.all),c('Category', 'SeriesName', 'correlation',"psi.all")] %>% filter(correlation!=0&psi.all<8)
+## Sentiment of Commercial Products
 
+psi.study2 <- sentiment.comm %>%
+  mutate(ProductName = I(toupper(as.character(Product)))) %>%  
+  group_by(Category) %>%
+  summarise(pos = sum(Sentiment == "POSITIVE"),
+            neg = sum(Sentiment == "NEGATIVE"), total = n()) %>%
+  mutate(psi.all = 100 * (pos - neg)/(pos +  neg)) %>% ungroup() %>% drop_na() %>% filter(total>50)
+
+nps.study2 <- survey.comm %>%
+  mutate(ProductName = I(toupper(as.character(Product))), 
+         SeriesName = I(toupper(as.character(Series)))) %>%
+  mutate(NPS = as.numeric(as.character(Product.NPS))) %>% group_by(ProductName) %>%
+  summarise(promoter = sum(NPS >= 9),
+            detractor = sum(NPS <= 6),
+            total = n()) %>%
+  mutate(nps = 100 * (promoter - detractor) / total) %>%  ungroup() %>% drop_na() %>% filter(total>50)
+
+rel.prod2 = nps.study2[order(nps.study2$nps)[1:3],c(1,5)]
+recom = rbind(merge(summary.cat,rel.prod,by = "ProductName") %>% filter (correlation>0.3),
+              merge(summary.cat2,rel.prod2,by = "ProductName") %>% filter (correlation>0.3))
+ggplot(recom)+geom_col(aes(x = ProductName, y= n, fill = Category))+theme(legend.position = "bottom")+labs(fill= "")+xlab("Product Name")+ylab("# of Categories")
 ```
-
-Second, we isolate on specific categories and observe the PSI scores in the $very$ $low$ state over the entire dataset in the Appendix in Table \ref{tab:neg.psi}.  The final list of categories that needs to addressed can be deduced by sorting Table \ref{tab:neg.psi} based on the correlation. The final list of categories that would need improvements are given in the Appendix in Table \ref{tab:improvements}.  A similar analysis is done for Commercial series and the suggested improvements are given in the Appendix in Table \ref{tab:improvements2}.
-
-```{r}
-imp <- neg.psi[order(neg.psi$correlation,decreasing = TRUE),] %>% filter(correlation > 0.5) %>% mutate(correlation = round(correlation,digits = 2),
-                                                                                                       psi.all = round(psi.all, digits = 2))
-
-
-imp2 <- neg.psi2[order(neg.psi2$correlation,decreasing = TRUE),] %>% filter(correlation > 0.5) %>% mutate(correlation = round(correlation,digits = 2),
-                                                                                                       psi.all = round(psi.all, digits = 2))
-
-```
-
-```{r}
-# head(nps.study[order(nps.study$nps),])
-bottom <- overall.study %>% filter(SeriesName ==  "IDEAPAD 100 SERIES"|SeriesName ==  "IDEACENTRE 300 SERIES",correlation>0,psi.all<8)
-
-# head(nps.study2[order(nps.study2$nps),])
-bottom2 <- overall.study2 %>% filter(SeriesName ==  "E SERIES"|SeriesName ==  "THINKPAD P SERIES",correlation>0,psi.all<8)
-
-```
-
-Further, this analysis also allows us to pick categories that lead to low PSI an pNPS scores.  The bottom three consumer products in terms of total pNPS include Ideapad 120s, Ideacentre 310 and Ideapad 110.  Table \ref{tab:con_lownps} shows that reliability, power supply, network and Ports/Slots require attention for the Ideapad 100 series. For Ideacentre 300 Series, there was not enough data to observe any meaningfull correlation of categories to pNPS. Further, the existing PSI scores were generally obsered to be in the Normal range.
-
-The bottom three commercial products in terms of total pNPS include products from the E Series and Thinkpad P series.  Table \ref{tab:com_lownps} shows that drivers require attention for P series and fan, network card and general service required attention for E series.  
 
 \section{Conclusion and Recommendations}
 
@@ -893,7 +901,7 @@ The final state matrix $P$ would be a combination of $P_S$ and $P_T$ as shown in
 ```{r eval=TRUE, fig.cap = "\\label{fig:neg-corr} Correlation between NPS and PSI for Customer Series", fig.width = 8, fig.pos="H"}
 # slice.low %>% ggplot(aes(x = psi, y = nps, group = SeriesName))+geom_point()+geom_smooth(method="lm", se=FALSE, color="darkgrey")+facet_wrap(.~Category)
 
-slice.high %>% ggplot(aes(x = psi, y = nps, group = SeriesName))+geom_point()+theme(legend.position = "none")+geom_smooth(method="lm", se=FALSE, color="darkgrey")+facet_wrap(.~Category)+xlab("PSI")+ylab("pNPS")
+slice.high %>% ggplot(aes(x = psi, y = nps, group = ProductName))+geom_point()+theme(legend.position = "none")+geom_smooth(method="lm", se=FALSE, color="darkgrey")+facet_wrap(.~Category)+xlab("PSI")+ylab("pNPS")
 
 
 ```
@@ -901,61 +909,9 @@ slice.high %>% ggplot(aes(x = psi, y = nps, group = SeriesName))+geom_point()+th
 ```{r eval=TRUE, fig.cap = "\\label{fig:neg-corr2} Correlation between NPS and PSI for Commercial Series", fig.width = 8}
 # slice.low %>% ggplot(aes(x = psi, y = nps, group = SeriesName))+geom_point()+geom_smooth(method="lm", se=FALSE, color="darkgrey")+facet_wrap(.~Category)
 
-slice.high2 %>% ggplot(aes(x = psi, y = nps, group = SeriesName))+geom_point()+theme(legend.position = "none")+geom_smooth(method="lm", se=FALSE, color="darkgrey")+facet_wrap(.~Category)+xlab("PSI")+ylab("pNPS")
+slice.high2 %>% ggplot(aes(x = psi, y = nps, group = ProductName))+geom_point()+theme(legend.position = "none")+geom_smooth(method="lm", se=FALSE, color="darkgrey")+facet_wrap(.~Category)+xlab("PSI")+ylab("pNPS")
 
 
 ```
 
-
-\subsection{Summary of Correlations}
-
-```{r, eval=TRUE}
-high <- summary.cat %>% filter(correlation >0.3) %>% group_by(SeriesName) %>% summarise(rel.high = n())
-low <- summary.cat %>% filter(correlation < (-0.3)) %>% group_by(SeriesName) %>% summarise(rel.low = n())
-summary = merge(high, low, by = "SeriesName")
-# dcast(slice.high[,c(1,3)], formula = Category~SeriesName)
-# high.cor.list <-  as.dict high.corr[,c(-3)]# dcast(,formula = SeriesName~Category)
-
-knitr::kable(summary,  caption = "\\label{tab:corr_category} Category-Sentiment Correlation for Consumer Series ($\\rho$)",  row.names = FALSE,col.names = c("Series", "$\\rho\\ge 0.3$", "$\\rho$ < -0.3"))
-```
-
-```{r, eval=TRUE}
-high <- summary.cat %>% filter(correlation >0.3) %>% group_by(SeriesName) %>% summarise(rel.high = n())
-low <- summary.cat %>% filter(correlation < (-0.3)) %>% group_by(SeriesName) %>% summarise(rel.low = n())
-summary = merge(high, low, by = "SeriesName")
-# dcast(slice.high[,c(1,3)], formula = Category~SeriesName)
-# high.cor.list <-  as.dict high.corr[,c(-3)]# dcast(,formula = SeriesName~Category)
-
-knitr::kable(summary,  caption = "\\label{tab:corr_category2} Category-Sentiment Correlation for Commercial Series ($\\rho$)",  row.names = FALSE,col.names = c("Series", "$\\rho\\ge 0.3$", "$\\rho$ < -0.3"))
-```
-
-\subsection{Categories with Negative PSI}
-
-```{r fig.pos="H"}
-knitr::kable(neg.psi,col.names = c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:neg.psi} Categories with strong correlation to NPS scores for Consumer Series ($\\rho$)",  row.names = FALSE)
-```
-
-```{r}
-knitr::kable(neg.psi2,col.names = c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:neg.psi2} Categories that significantly correlate with NPS scores for Commercial Series($\\rho$)",  row.names = FALSE)
-```
-
-\subsection{Relevant Categories that Positively Correlate with NPS Scores}
-
-```{r}
-knitr::kable(imp,col.names =  c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:improvements} Categories for Potential Improvement, Consumer Series")
-
-knitr::kable(imp2,col.names =  c("Category","Series", "$\\rho$","PSI"), caption = "\\label{tab:improvements2} Categories for Potential Improvement, Commercial Series")
-
-```
-
-
-\subsection{Categories for Potential Improvement}
-
-```{r}
-bottom <- overall.study %>% filter(SeriesName ==  "IDEAPAD 100 SERIES"|SeriesName ==  "IDEACENTRE 300 SERIES",correlation>0,psi.all<8)
-knitr::kable(bottom[,c(1,4,8)], col.names = c("Category","$\\rho$","PSI"), caption = "\\label{tab:con_lownps} Categories for Potential Improvement, Ideapad 100 Series",  row.names = FALSE)
-bottom2 <- overall.study2 %>% filter(SeriesName ==  "E SERIES"|SeriesName ==  "THINKPAD P SERIES",correlation>0,psi.all<8)
-knitr::kable(bottom2[,c(1,2,4,8)], col.names = c("Category","Series","$\\rho$","PSI"), caption = "\\label{tab:com_lownps} Categories for Potential Improvement, E and P series",  row.names = FALSE)
-
-```
 
