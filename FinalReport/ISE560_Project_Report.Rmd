@@ -407,7 +407,7 @@ knitr::kable(round(P2[c(1,2,6,7),], digits=3), row.names=TRUE,
 \end{tabular}\label{tbl:R2}}
 
 \end{table}
-We assume rewards are of the form shown in Tables.\ref{tbl:R1} and \ref{tbl:R2} with parameters $r1$ and $r2$. We will assume $r1=10$, $r2=5$ and conducting a root cause analysis has cost $c=7$. Note: The combined reward matrices using these parameters can be found in Appendix \ref{app:Rewards}.
+We assume rewards are of the form shown in Tables \ref{tbl:R1} and \ref{tbl:R2} with parameters $r1$ and $r2$. We will assume $r1=10$, $r2=5$ and conducting a root cause analysis has cost $c=7$. Note: The combined reward matrices using these parameters can be found in Appendix \ref{app:Rewards}.
 
 \subsection{Results}
 
@@ -428,7 +428,7 @@ Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0
 
 \section{Customer Sentiment Analysis}
 
-In order to identify areas that are faring well with the population and those that need improvement, it is useful to tap into large datasets for information on potential areas of improvemnt.  We first identify product-category pairs that correlate with NPS with a correlation of 0.3. Figures.\ref{fig:neg-corr} and \ref{fig:neg-corr2} highlight the categories that correlate with NPS.  For Consumer products, lowest NPS was observed for Ideapad 110, the Yoga 710 and the Ideapad 120S; for Commercial products, the lowest was E585, E485 and E580. The recommendations are listed in Table\ref{tab:recom}.  Details on the number of epochs over which correlation was observed is given in Appendix \ref{app:details}.
+In order to identify areas that are faring well with the population and those that need improvement, it is useful to tap into large datasets for information on potential areas of improvemnt.  We first identify product-category pairs that correlate with NPS with a correlation of 0.3. Figures \ref{fig:neg-corr} and \ref{fig:neg-corr2} highlight the categories that correlate with NPS.  For Consumer products, lowest NPS was observed for Ideapad 110, the Yoga 710 and the Ideapad 120S; for Commercial products, the lowest was E585, E485 and E580. The recommendations are listed in Table \ref{tab:recom}.  Details on the number of epochs over which correlation was observed is given in Appendix \ref{app:details}.
 
 ```{r,  eval=TRUE}
 ## Sentiment of consumer products
@@ -510,7 +510,7 @@ Considering the pNPS score as a stochastic process where the random variables ar
 
 $$X_{t} = \sum_{i = 1}^p \alpha_i X_{t-i} + \sum_{j = 1}^q  \beta_j \theta_{t-j} $$.
 
-where $\alpha_i$ $\forall i \in \{1,2,\ldots, p\}$  and $\beta_j$ $\forall j \in \{1,2,\ldots, q\}$ are coefficients of the linear model making a 1-step prediction of pNPS,  $\theta_t$ is the moving average component at time $t$ following a normal distribution with zero mean and variance $\sigma^2_w$. As the pNPS scores are heteroscedastic, the time series are also differenced $d$ times to satisfy the condition of stationarity.  Note that $p$, $d$ and $q$ are  referred to as the order of the model.  In Tables.\ref{tab:ARIMA_Commercial} and \ref{tab:ARIMA_Consumer}, we present train set errors of best ARIMA model with the lowest Akaike information criterion (AIC) with order $(p,q,r)$.  The pNPS calcualtions were made over a period of seven days.  It is also observed that temporal correlation is sensitive to the series.
+where $\alpha_i$ $\forall i \in \{1,2,\ldots, p\}$  and $\beta_j$ $\forall j \in \{1,2,\ldots, q\}$ are coefficients of the linear model making a 1-step prediction of pNPS,  $\theta_t$ is the moving average component at time $t$ following a normal distribution with zero mean and variance $\sigma^2_w$. As the pNPS scores are heteroscedastic, the time series are also differenced $d$ times to satisfy the condition of stationarity.  Note that $p$, $d$ and $q$ are  referred to as the order of the model.  In Tables \ref{tab:ARIMA_Commercial} and \ref{tab:ARIMA_Consumer}, we present train set errors of best ARIMA model with the lowest Akaike information criterion (AIC) with order $(p,q,r)$.  The pNPS calcualtions were made over a period of seven days.  It is also observed that temporal correlation is sensitive to the series.
 
 ```{r}
 series.ts.main.com <- series.ts.main.com%>% mutate(MAE = round(MAE,digits = 2),RMSE = round(RMSE,digits = 2)) %>%
