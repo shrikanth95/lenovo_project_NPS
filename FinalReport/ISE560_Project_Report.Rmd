@@ -9,6 +9,7 @@ header-includes:
    - \onehalfspacing
    - \usepackage{enumitem}
    - \usepackage{float}
+   - \usepackage{subfig}
    - \usepackage{url}
    - \usepackage{listings}
    # - \usepackage{biblatex}
@@ -90,7 +91,7 @@ library(grid)
 library(gridExtra)
 # library(kableExtra)
 library(tidyverse)
-#library(kableExtra)
+library(kableExtra)
 library(car)
 library(caret)
 library(pander)
@@ -217,19 +218,9 @@ The next phase of our analysis developed a Markov decision process (MDP) to iden
 
 \subsection{States}\label{sec:statedef}
 
-We considered using either PSI or predicted NPS  states as the basis for the MDP.  The challenge with using PSI is that defining states is somewhat arbitrary.  We considered standardizing the PSI scores and then delineating states using multiples of the standard deviation.  However, we felt that approach would not be as intuitive to understand because the states would not be defined according to the [-100, 100] scale Lenovo is familiar with for PSI.  On the other hand, there are established industry-standard categories for NPS\cite{Nps19}.  Therefore, we chose to use these industry-standards as the basis for the predicted NPS states in our MDP, and they are listed below.
+We considered using either PSI or predicted NPS  states as the basis for the MDP.  The challenge with using PSI is that defining states is somewhat arbitrary.  We considered standardizing the PSI scores and then delineating states using multiples of the standard deviation.  However, we felt that approach would not be as intuitive to understand because the states would not be defined according to the [-100, 100] scale Lenovo is familiar with for PSI.  On the other hand, there are established industry-standard categories for NPS [1].  Therefore, we chose to use these industry-standards as the basis for the predicted NPS states in our MDP, and they are listed as follows:Very Low (--): $NPS \le 8$ ; Moderately Low (-): $8 < NPS \le 35$; Normal (0): $35 < NPS \le 45$; Moderately High (+): $45 < NPS \le 65$; Very High (++): $65 < NPS$.
 
-\begin{itemize}[noitemsep]
-  \item Very Low (--): $NPS \le 8$ 
-  \item Moderately Low (-): $8 < NPS \le 35$ 
-  \item Normal (0): $35 < NPS \le 45$ 
-  \item Moderately High (+): $45 < NPS \le 65$ 
-  \item Very High (++): $65 < NPS$ 
-\end{itemize}
-
-We will include telemetry status in the MDP since Lenovo would like to make use of telemetry in the future.  We will assume there are two possible telemetry states, Normal (N) and Abnormal (A).  See Appendix \ref{app:TM} for an example of how Normal/Abnormal states can be characterized once Lenovo has archived several months worth of data.
-
-Therefore the possible combined states for the MDP are {(++,N), (++,A), (+,N), (+,A), (0,N), (0,A), (-,N), (-,A), (--,N), (--,A)}
+We will include telemetry status in the MDP since Lenovo would like to make use of telemetry in the future.  We will assume there are two possible telemetry states, Normal (N) and Abnormal (A).  See Appendix \ref{app:TM} for an example of how Normal/Abnormal states can be characterized once Lenovo has archived several months worth of data. Therefore the possible combined states for the MDP are {(++,N), (++,A), (+,N), (+,A), (0,N), (0,A), (-,N), (-,A), (--,N), (--,A)}
 
 \subsection{Actions}
 
@@ -237,6 +228,7 @@ We assume two possible actions: {Do Nothing, Conduct Root Cause Analysis}.  Furt
 
 \begin{table}[h!]
 \centering
+\small
 \caption{Example Actions}
 \begin{tabular}{lc|c|c|c|c|c|}
 \cline{3-7}
@@ -253,6 +245,7 @@ We calculated the natural evolution of NPS by month (i.e., same epoch as linear 
 
 \begin{table}[h]
 \caption{Individual Transition Matrices, NPS and Telemetry}
+\small
 \centering
 \hspace*{\fill}
 \begin{tabular}[t]{l|c|c|c|c|c|}
@@ -309,11 +302,11 @@ P1 = combine.matrix(p.s,
 rownames(P1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
 colnames(P1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
 
-knitr::kable(round(P1, digits=3), row.names=TRUE, caption = "Consumer, All States, Action = Do Nothing  \\label{tbl:P1}")
+knitr::kable(round(P1, digits=3), row.names=TRUE, caption = "Consumer, All States, Action = Do Nothing  \\label{tbl:P1}", booktabs = T)%>%kable_styling(font_size = 9)
 
 ```
 
-\newpage
+<!-- \newpage -->
 
 Next, we assume the action "Conduct Root Cause Analysis" reduces the probability of transitioning to Very_Low by $100p\%$ compared to "Do Nothing" if Telemetry is Abnormal and $75p\%$ if Telemetry is Normal (i.e., root cause analysis is more likely to succeed if there is abnormal telemetry data to troublehsoot).  The change in percentage is evenly distributed among the remaining 4 states.  For example, if $p=0.1$ then the transition matrix for ``Conduct Root Cause Analysis" is shown in Table \ref{tbl:P2}.  Note that only the rows which differ from Table \ref{tbl:P1} are displayed.
 
@@ -381,20 +374,17 @@ P2[7,8] <- P1[7,8] + delta/(n-1)
 P2[7,9] <- P1[7,9] + delta/(n-1)
 P2[7,10] <- P1[7,10] + delta/(n-1)
 
-knitr::kable(round(P2[c(1,2,6,7),], digits=3), row.names=TRUE, 
-             caption = "Consumer, All States, Action = Root Cause Analysis \\label{tbl:P2}")
+knitr::kable(round(P2[c(1,2,6,7),], digits=3), row.names=TRUE,
+             caption = "Consumer, All States, Action = Root Cause Analysis \\label{tbl:P2}", booktabs = T) %>% kable_styling(font_size = 9)
 
 ```
 
 \subsection{Rewards}
-
-We assume rewards are of the form shown in Tables \ref{tbl:R1} and \ref{tbl:R2} with parameters $r1$ and $r2$.
-
 \begin{table}[h!]
-\caption{Reward Matrix Templates}
 \centering
-\hspace*{\fill}
-\begin{tabular}[t]{l|c|c|c|c|c|}
+\small
+\caption{Reward Matrix Template}
+\subfloat[NPS Reward Matrix]{\begin{tabular}[t]{l|c|c|c|c|c|}
 \cline{2-6}
 \multicolumn{1}{c|}{}      & - - & - & 0 & + & ++ \\ \hline
 \multicolumn{1}{|l|}{- -} & -2r1    & -r1    & 0   & r1 & 2r1    \\ \hline
@@ -402,26 +392,26 @@ We assume rewards are of the form shown in Tables \ref{tbl:R1} and \ref{tbl:R2} 
 \multicolumn{1}{|l|}{0}   & -2r1   & -r1  & 0     & r1   & 2r1       \\ \hline
 \multicolumn{1}{|l|}{+} & -2r1  & -r1    & 0     & r1  & 2r1       \\ \hline
 \multicolumn{1}{|l|}{++} & -2r1    & -r1    & 0     & r1    & 2r1      \\ \hline
-\end{tabular}
-\hfill
-\begin{tabular}[t]{l|c|c|}
+\end{tabular}\label{tbl:R1}}
+\quad
+\hspace*{0.5in}
+\subfloat[NPS Reward Matrix]{\begin{tabular}[t]{l|c|c|}
 \cline{2-3}
 \multicolumn{1}{c|}{}      & N & A  \\ \hline
 \multicolumn{1}{|l|}{N}      & 2r2 & -r2  \\ \hline
 \multicolumn{1}{|l|}{A}      & r2 & -2r2  \\ \hline
-\end{tabular}
-\hspace*{\fill}
-\label{tbl:R1}
-\end{table}
+\end{tabular}\label{tbl:R2}}
 
-We will assume $r1=10$, $r2=5$ and conducting a root cause analysis has cost $c=7$. Note: The combined reward matrices using these parameters can be found in Appendix \ref{app:Rewards}.
+\end{table}
+We assume rewards are of the form shown in Tables.\ref{tbl:R1} and \ref{tbl:R2} with parameters $r1$ and $r2$. We will assume $r1=10$, $r2=5$ and conducting a root cause analysis has cost $c=7$. Note: The combined reward matrices using these parameters can be found in Appendix \ref{app:Rewards}.
 
 \subsection{Results}
 
 Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]$ and a discount factor of $0.95$.  The results as a function of $p$ are listed in Table \ref{tbl:MDP}, where "-" represents "Do Nothing" and "RC" represents "Conduct Root Cause Analysis".  The R source code used to conduct this analysis are listed in Appendices \ref{app:MDP} and \ref{app:Addl}; the values for rewards, cost, and discount factor are parameters which can be easily modified by Lenovo.
 
 \begin{table}[h!]
-\caption{Optimal Policy as a Function of p}
+\caption{Optimal Policy as a Function of $p$}
+\small
 \centering
 \begin{tabular}{l|c|c|c|c|c|c|c|c|c|c|}
 \cline{2-11}
@@ -478,7 +468,7 @@ nps.study2 <- survey.comm %>%
 rel.prod2 = nps.study2[order(nps.study2$nps)[1:3],c(1,5)]
 recom = rbind(merge(summary.cat,rel.prod,by = "ProductName") %>% filter (correlation>0.3),
               merge(summary.cat2,rel.prod2,by = "ProductName") %>% filter (correlation>0.3))
-ggplot(recom)+geom_col(aes(x = ProductName, y= n, fill = Category))+theme(legend.position = "bottom")+labs(fill= "")+xlab("Product Name")+ylab("# of Categories")
+ggplot(recom)+geom_col(aes(x = ProductName, y= n, fill = Category))+theme_gray(base_size = 9)+theme(legend.position = "bottom")+labs(fill= "")+xlab("Product Name")+ylab("# of Categories")
 ```
 
 \section{Conclusion and Recommendations}
@@ -490,10 +480,15 @@ We also developed a framework for a Markov Decision Process (MDP) based on the p
 Finally, we identified the three products with the lowest average NPS score in each business segment.  These are the Ideapad 110, the Yoga 710 and the Ideapad 120S for the Consumger segment, and the E585, E485 and E580 for the Commercial segment.  Further, we identified the categories of customer sentiment with the strongest correlation to PSI for each of the lowest performing products.  Some of the categories common to mutiple low-rated products include Battery, Memory and Display.  While we cannot conclude improvements in these categories will improve PSI and NPS scores based on the data available (i.e., correlation does not imply causation), the strong correlation does justify Lenovo considering these categories as areas for potential improvement. 
 
 \clearpage
+<!-- \cite{Nps19}\cite{box2015time} -->
+\section*{References}
 
-\bibliographystyle{unsrt}
-\bibliography{ise560report}
-<!-- \printbibliography -->
+[1] North America International. Net promoter benchmarks. [www.satmetrix.com/wpcontent/
+uploads/2019/04/2019Benchmarks.pdf](www.satmetrix.com/wpcontent/uploads/2019/04/2019Benchmarks.pdf), 2019. [Online; accessed 19 Nov 2019].
+
+[2] George EP Box, Gwilym M. Jenkins, Gregory C. Reinsel, and Greta M Ljung. _Time series analysis: forecasting and control_. John Wiley & Sons, 2015.
+<!-- \bibliographystyle{unsrt} -->
+<!-- \bibliography{ise560report} -->
 
 \clearpage
 
@@ -503,7 +498,7 @@ Finally, we identified the three products with the lowest average NPS score in e
 
 \subsection{Time Series Analysis}
 
-Considering the pNPS score as a stochastic process where the random variables are realizations of pNPS value, attempts to perform classical  time-series analysis.  If $X_t$ denoted pNPS at time $t$, the auto-regressive moving-average(ARMA) model \cite{box2015time} would be
+Considering the pNPS score as a stochastic process where the random variables are realizations of pNPS value, attempts to perform classical  time-series analysis.  If $X_t$ denoted pNPS at time $t$, the auto-regressive moving-average(ARMA) model [2] would be
 
 $$X_{t} = \sum_{i = 1}^p \alpha_i X_{t-i} + \sum_{j = 1}^q  \beta_j \theta_{t-j} $$.
 
@@ -514,8 +509,8 @@ series.ts.main.com <- series.ts.main.com%>% mutate(MAE = round(MAE,digits = 2),R
   filter(MAE != 0,SeriesName != "ACCESSORIES", SeriesName != "ANNIVERSARY")
 series.ts.main <- series.ts.main%>% mutate(MAE = round(MAE,digits = 2),RMSE = round(RMSE,digits = 2)) %>%
   filter(MAE != 0, SeriesName != "SMART HOME", SeriesName != "OTHER")
-knitr::kable(series.ts.main.com[series.ts.main.com$Duration == 7,-5],row.names = FALSE,caption = "\\label{tab:ARIMA_Commercial} Series wise Consumer Survey", col.names = c("Series", "Order", "MAE", "RMSE"))
-knitr::kable(series.ts.main[series.ts.main$Duration == 7,-5],row.names = FALSE,caption = "\\label{tab:ARIMA_Consumer} Series wise Consumer Survey", col.names = c("Series", "Order", "MAE", "RMSE"))
+knitr::kable(series.ts.main.com[series.ts.main.com$Duration == 7,-5],row.names = FALSE,caption = "\\label{tab:ARIMA_Commercial} Series wise Consumer Survey", col.names = c("Series", "Order", "MAE", "RMSE"), booktabs = T)
+knitr::kable(series.ts.main[series.ts.main$Duration == 7,-5],row.names = FALSE,caption = "\\label{tab:ARIMA_Consumer} Series wise Consumer Survey", col.names = c("Series", "Order", "MAE", "RMSE"), booktabs = T)
 
 
 ```
@@ -641,7 +636,7 @@ beta_coeff <- round(mdl2$finalModel$coefficients[2:14], digits=2)
 nconsumer <- sub("SeriesName", "", names(beta_coeff))
 knitr::kable(data.frame(nconsumer, unname(beta_coeff)),
              col.names = c("Consumer Series", "$\\beta_1$"),
-             caption = "Coefficients for Consumer Model") 
+             caption = "Coefficients for Consumer Model", booktabs = T) 
 
 # Commercial
 beta_coeff1 <- round(mdl4$finalModel$coefficients[2:12], digits=2)
@@ -649,7 +644,7 @@ beta_coeff2 <- round(mdl4$finalModel$coefficients[14:24], digits=2)
 ncomm <- sub("SeriesName", "", names(beta_coeff1))
 knitr::kable(data.frame(ncomm, unname(beta_coeff1), unname(beta_coeff2)), 
              col.names = c("Commercial Series", "$\\beta_1$", "$\\beta_2$"),
-             caption = "Coefficients for Commercial Model") 
+             caption = "Coefficients for Commercial Model", booktabs = T) 
 
 ```
 
@@ -684,7 +679,7 @@ yogac930.summ <- cbind(Date = yogac930$date,
                                             PI.lower = round(yogac930.pred[,2], digits=2),
                                             PI.upper = round(yogac930.pred[,3], digits=2))) 
 
-knitr::kable(yogac930.summ, caption="Yoga C930 Predictions, 95% Confidence and Prediction Intervals")
+knitr::kable(yogac930.summ, caption="Yoga C930 Predictions, 95% Confidence and Prediction Intervals",booktabs = T)
 ```
 
 \subsection{Ideapad 330S}
@@ -711,7 +706,7 @@ ideapad330.summ <- cbind(Date = ideapad330$date,
                                             PI.lower = round(ideapad330.pred[,2], digits=2),
                                             PI.upper = round(ideapad330.pred[,3], digits=2))) 
 
-knitr::kable(ideapad330.summ, caption="Ideapad 330 Predictions, 95% Confidence and Prediction Intervals")
+knitr::kable(ideapad330.summ, caption="Ideapad 330 Predictions, 95% Confidence and Prediction Intervals", booktabs = T)
 ```
 
 \subsection{Yoga 730}
@@ -739,7 +734,7 @@ yoga730.summ <- cbind(Date = yoga730$date,
                                             PI.lower = round(yoga730.pred[,2], digits=2),
                                             PI.upper = round(yoga730.pred[,3], digits=2))) 
 
-knitr::kable(yoga730.summ, caption="Yoga 730 Predictions, 95% Confidence and Prediction Intervals")
+knitr::kable(yoga730.summ, caption="Yoga 730 Predictions, 95% Confidence and Prediction Intervals", booktabs = T)
 ```
 
 \subsection{Legion Y730}
@@ -767,7 +762,7 @@ legiony730.summ <- cbind(Date = legiony730$date,
                                             PI.lower = round(legiony730.pred[,2], digits=2),
                                             PI.upper = round(legiony730.pred[,3], digits=2))) 
 
-knitr::kable(legiony730.summ, caption="Legion Y730 Predictions, 95% Confidence and Prediction Intervals")
+knitr::kable(legiony730.summ, caption="Legion Y730 Predictions, 95% Confidence and Prediction Intervals", booktabs = T)
 
 ```
 
@@ -797,7 +792,7 @@ t490.summ <- cbind(Date = t490$date,
                                             PI.lower = round(t490.pred[,2], digits=2),
                                             PI.upper = round(t490.pred[,3], digits=2)))
 
-knitr::kable(t490.summ, caption="T490 Predictions, 95% Confidence and Prediction Intervals")
+knitr::kable(t490.summ, caption="T490 Predictions, 95% Confidence and Prediction Intervals", booktabs = T)
 
 ```
 
@@ -827,7 +822,7 @@ rownames(R_A1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N",
 colnames(R_A1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N",
                     "- - , A"," -, A"," 0, A"," +, A","++, A")
 
-knitr::kable(R_A1, row.names=TRUE, caption = "Consumer, Rewards, Action = Do Nothing")
+knitr::kable(R_A1, row.names=TRUE, caption = "Consumer, Rewards, Action = Do Nothing", booktabs = T)
 ```
 
 ```{r}
@@ -847,7 +842,7 @@ R_A2[7,] <- R_A1[7,] - cost
 rownames(R_A2) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
 colnames(R_A2) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
 
-knitr::kable(R_A2[c(1,2,6,7),], row.names=TRUE, caption = "Consumer, Rewards, Action = Root Cause Analysis")
+knitr::kable(R_A2[c(1,2,6,7),], row.names=TRUE, caption = "Consumer, Rewards, Action = Root Cause Analysis", booktabs = T)
 
 ```
 
@@ -888,7 +883,7 @@ n.tel = 2
 p.tel = matrix(c(0.75, 0.25, 0.25, 0.75),nrow = 2, ncol = 2, byrow = TRUE)
 rownames(p.tel) <- c("N","AN")
 colnames(p.tel) <- c("N","AN")
-knitr::kable(p.tel ,  caption = "A possible telemetry transtion matrix from ",  row.names = TRUE)
+knitr::kable(p.tel ,  caption = "A possible telemetry transtion matrix from ",  row.names = TRUE, booktabs = T)
 
 ```
 
