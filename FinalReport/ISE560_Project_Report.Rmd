@@ -91,7 +91,7 @@ library(grid)
 library(gridExtra)
 # library(kableExtra)
 library(tidyverse)
-library(kableExtra)
+# library(kableExtra)
 library(car)
 library(caret)
 library(pander)
@@ -228,7 +228,7 @@ We assume two possible actions: {Do Nothing, Conduct Root Cause Analysis}.  Furt
 
 \begin{table}[h!]
 \centering
-\small
+ 
 \caption{Example Actions}
 \begin{tabular}{lc|c|c|c|c|c|}
 \cline{3-7}
@@ -245,7 +245,7 @@ We calculated the natural evolution of NPS by month (i.e., same epoch as linear 
 
 \begin{table}[h]
 \caption{Individual Transition Matrices, NPS and Telemetry}
-\small
+ 
 \centering
 \hspace*{\fill}
 \begin{tabular}[t]{l|c|c|c|c|c|}
@@ -302,7 +302,7 @@ P1 = combine.matrix(p.s,
 rownames(P1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
 colnames(P1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
 
-knitr::kable(round(P1, digits=3), row.names=TRUE, caption = "Consumer, All States, Action = Do Nothing  \\label{tbl:P1}", booktabs = T)%>%kable_styling(font_size = 9)
+knitr::kable(round(P1, digits=3), row.names=TRUE, caption = "Consumer, All States, Action = Do Nothing  \\label{tbl:P1}" )
 
 ```
 
@@ -375,14 +375,13 @@ P2[7,9] <- P1[7,9] + delta/(n-1)
 P2[7,10] <- P1[7,10] + delta/(n-1)
 
 knitr::kable(round(P2[c(1,2,6,7),], digits=3), row.names=TRUE,
-             caption = "Consumer, All States, Action = Root Cause Analysis \\label{tbl:P2}", booktabs = T) %>% kable_styling(font_size = 9)
+             caption = "Consumer, All States, Action = Root Cause Analysis \\label{tbl:P2}" )  
 
 ```
 
 \subsection{Rewards}
 \begin{table}[h!]
 \centering
-\small
 \caption{Reward Matrix Template}
 \subfloat[NPS Reward Matrix]{\begin{tabular}[t]{l|c|c|c|c|c|}
 \cline{2-6}
@@ -411,7 +410,6 @@ Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0
 
 \begin{table}[h!]
 \caption{Optimal Policy as a Function of $p$}
-\small
 \centering
 \begin{tabular}{l|c|c|c|c|c|c|c|c|c|c|}
 \cline{2-11}
@@ -509,8 +507,8 @@ series.ts.main.com <- series.ts.main.com%>% mutate(MAE = round(MAE,digits = 2),R
   filter(MAE != 0,SeriesName != "ACCESSORIES", SeriesName != "ANNIVERSARY")
 series.ts.main <- series.ts.main%>% mutate(MAE = round(MAE,digits = 2),RMSE = round(RMSE,digits = 2)) %>%
   filter(MAE != 0, SeriesName != "SMART HOME", SeriesName != "OTHER")
-knitr::kable(series.ts.main.com[series.ts.main.com$Duration == 7,-5],row.names = FALSE,caption = "\\label{tab:ARIMA_Commercial} Series wise Consumer Survey", col.names = c("Series", "Order", "MAE", "RMSE"), booktabs = T)
-knitr::kable(series.ts.main[series.ts.main$Duration == 7,-5],row.names = FALSE,caption = "\\label{tab:ARIMA_Consumer} Series wise Consumer Survey", col.names = c("Series", "Order", "MAE", "RMSE"), booktabs = T)
+knitr::kable(series.ts.main.com[series.ts.main.com$Duration == 7,-5],row.names = FALSE,caption = "\\label{tab:ARIMA_Commercial} Series wise Consumer Survey", col.names = c("Series", "Order", "MAE", "RMSE"))
+knitr::kable(series.ts.main[series.ts.main$Duration == 7,-5],row.names = FALSE,caption = "\\label{tab:ARIMA_Consumer} Series wise Consumer Survey", col.names = c("Series", "Order", "MAE", "RMSE") )
 
 
 ```
@@ -636,7 +634,7 @@ beta_coeff <- round(mdl2$finalModel$coefficients[2:14], digits=2)
 nconsumer <- sub("SeriesName", "", names(beta_coeff))
 knitr::kable(data.frame(nconsumer, unname(beta_coeff)),
              col.names = c("Consumer Series", "$\\beta_1$"),
-             caption = "Coefficients for Consumer Model", booktabs = T) 
+             caption = "Coefficients for Consumer Model" ) 
 
 # Commercial
 beta_coeff1 <- round(mdl4$finalModel$coefficients[2:12], digits=2)
@@ -644,7 +642,7 @@ beta_coeff2 <- round(mdl4$finalModel$coefficients[14:24], digits=2)
 ncomm <- sub("SeriesName", "", names(beta_coeff1))
 knitr::kable(data.frame(ncomm, unname(beta_coeff1), unname(beta_coeff2)), 
              col.names = c("Commercial Series", "$\\beta_1$", "$\\beta_2$"),
-             caption = "Coefficients for Commercial Model", booktabs = T) 
+             caption = "Coefficients for Commercial Model" ) 
 
 ```
 
@@ -705,7 +703,7 @@ ideapad330.summ <- cbind(Date = ideapad330$date,
                                             PI.lower = round(ideapad330.pred[,2], digits=2),
                                             PI.upper = round(ideapad330.pred[,3], digits=2))) 
 
-knitr::kable(ideapad330.summ, caption="Ideapad 330 Predictions, 95\\% Confidence and Prediction Intervals", booktabs = T)
+knitr::kable(ideapad330.summ, caption="Ideapad 330 Predictions, 95\\% Confidence and Prediction Intervals" )
 ```
 
 \subsection{Yoga 730}
@@ -733,7 +731,7 @@ yoga730.summ <- cbind(Date = yoga730$date,
                                             PI.lower = round(yoga730.pred[,2], digits=2),
                                             PI.upper = round(yoga730.pred[,3], digits=2))) 
 
-knitr::kable(yoga730.summ, caption="Yoga 730 Predictions, 95\\% Confidence and Prediction Intervals", booktabs = T)
+knitr::kable(yoga730.summ, caption="Yoga 730 Predictions, 95\\% Confidence and Prediction Intervals" )
 ```
 
 \subsection{Legion Y730}
@@ -761,7 +759,7 @@ legiony730.summ <- cbind(Date = legiony730$date,
                                             PI.lower = round(legiony730.pred[,2], digits=2),
                                             PI.upper = round(legiony730.pred[,3], digits=2))) 
 
-knitr::kable(legiony730.summ, caption="Legion Y730 Predictions, 95\\% Confidence and Prediction Intervals", booktabs = T)
+knitr::kable(legiony730.summ, caption="Legion Y730 Predictions, 95\\% Confidence and Prediction Intervals" )
 
 ```
 
@@ -791,7 +789,7 @@ t490.summ <- cbind(Date = t490$date,
                                             PI.lower = round(t490.pred[,2], digits=2),
                                             PI.upper = round(t490.pred[,3], digits=2)))
 
-knitr::kable(t490.summ, caption="T490 Predictions, 95\\% Confidence and Prediction Intervals", booktabs = T)
+knitr::kable(t490.summ, caption="T490 Predictions, 95\\% Confidence and Prediction Intervals" )
 
 ```
 
@@ -821,7 +819,7 @@ rownames(R_A1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N",
 colnames(R_A1) <- c("- -, N"," -, N"," 0, N"," +, N","++, N",
                     "- - , A"," -, A"," 0, A"," +, A","++, A")
 
-knitr::kable(R_A1, row.names=TRUE, caption = "Consumer, Rewards, Action = Do Nothing", booktabs = T)
+knitr::kable(R_A1, row.names=TRUE, caption = "Consumer, Rewards, Action = Do Nothing" )
 ```
 
 ```{r}
@@ -841,7 +839,7 @@ R_A2[7,] <- R_A1[7,] - cost
 rownames(R_A2) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
 colnames(R_A2) <- c("- -, N"," -, N"," 0, N"," +, N","++, N","- - , A"," -, A"," 0, A"," +, A","++, A")
 
-knitr::kable(R_A2[c(1,2,6,7),], row.names=TRUE, caption = "Consumer, Rewards, Action = Root Cause Analysis", booktabs = T)
+knitr::kable(R_A2[c(1,2,6,7),], row.names=TRUE, caption = "Consumer, Rewards, Action = Root Cause Analysis" )
 
 ```
 
@@ -882,7 +880,7 @@ n.tel = 2
 p.tel = matrix(c(0.75, 0.25, 0.25, 0.75),nrow = 2, ncol = 2, byrow = TRUE)
 rownames(p.tel) <- c("N","AN")
 colnames(p.tel) <- c("N","AN")
-knitr::kable(p.tel ,  caption = "A possible telemetry transtion matrix from ",  row.names = TRUE, booktabs = T)
+knitr::kable(p.tel ,  caption = "A possible telemetry transtion matrix from ",  row.names = TRUE )
 
 ```
 
