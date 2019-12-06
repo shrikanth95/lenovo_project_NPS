@@ -891,6 +891,8 @@ knitr::kable(p.tel ,  caption = "A possible telemetry transtion matrix from ",  
 
 The final state matrix $P$ would be a combination of $P_S$ and $P_T$ as shown in Section \ref{sec:transitions}.
 
+\clearpage
+
 \section{Customer Sentiment Analysis}
 
 \subsection{Category-wise Correlation Between NPS and PSI}
