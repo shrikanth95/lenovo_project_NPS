@@ -654,7 +654,6 @@ knitr::kable(data.frame(ncomm, unname(beta_coeff1), unname(beta_coeff2)),
 
 The following tables list predicted NPS (pNPS) scores, 95% confidence interval bounds and 95% prediction interval bounds for five key products previously identified by Lenovo.
 
-\subsection{Yoga C730}
 ```{r}
 # Can't get prediction interval from caret so refit directly with lm
 pmdl2 <- lm(nps ~ SeriesName + psi + stars, data=all_consumer)
@@ -679,7 +678,7 @@ yogac930.summ <- cbind(Date = yogac930$date,
                                             PI.lower = round(yogac930.pred[,2], digits=2),
                                             PI.upper = round(yogac930.pred[,3], digits=2))) 
 
-knitr::kable(yogac930.summ, caption="Yoga C930 Predictions, 95% Confidence and Prediction Intervals",booktabs = T)
+knitr::kable(yogac930.summ, caption="Yoga C930 Predictions, 95\\% Confidence and Prediction Intervals",booktabs = T)
 ```
 
 \subsection{Ideapad 330S}
@@ -706,7 +705,7 @@ ideapad330.summ <- cbind(Date = ideapad330$date,
                                             PI.lower = round(ideapad330.pred[,2], digits=2),
                                             PI.upper = round(ideapad330.pred[,3], digits=2))) 
 
-knitr::kable(ideapad330.summ, caption="Ideapad 330 Predictions, 95% Confidence and Prediction Intervals", booktabs = T)
+knitr::kable(ideapad330.summ, caption="Ideapad 330 Predictions, 95\\% Confidence and Prediction Intervals", booktabs = T)
 ```
 
 \subsection{Yoga 730}
@@ -734,7 +733,7 @@ yoga730.summ <- cbind(Date = yoga730$date,
                                             PI.lower = round(yoga730.pred[,2], digits=2),
                                             PI.upper = round(yoga730.pred[,3], digits=2))) 
 
-knitr::kable(yoga730.summ, caption="Yoga 730 Predictions, 95% Confidence and Prediction Intervals", booktabs = T)
+knitr::kable(yoga730.summ, caption="Yoga 730 Predictions, 95\\% Confidence and Prediction Intervals", booktabs = T)
 ```
 
 \subsection{Legion Y730}
@@ -762,7 +761,7 @@ legiony730.summ <- cbind(Date = legiony730$date,
                                             PI.lower = round(legiony730.pred[,2], digits=2),
                                             PI.upper = round(legiony730.pred[,3], digits=2))) 
 
-knitr::kable(legiony730.summ, caption="Legion Y730 Predictions, 95% Confidence and Prediction Intervals", booktabs = T)
+knitr::kable(legiony730.summ, caption="Legion Y730 Predictions, 95\\% Confidence and Prediction Intervals", booktabs = T)
 
 ```
 
@@ -792,7 +791,7 @@ t490.summ <- cbind(Date = t490$date,
                                             PI.lower = round(t490.pred[,2], digits=2),
                                             PI.upper = round(t490.pred[,3], digits=2)))
 
-knitr::kable(t490.summ, caption="T490 Predictions, 95% Confidence and Prediction Intervals", booktabs = T)
+knitr::kable(t490.summ, caption="T490 Predictions, 95\\% Confidence and Prediction Intervals", booktabs = T)
 
 ```
 
