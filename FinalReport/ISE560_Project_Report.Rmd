@@ -313,7 +313,7 @@ knitr::kable(round(P1, digits=3), row.names=TRUE, caption = "Consumer, All State
 
 <!-- \newpage -->
 
-Next, we assume the action "Conduct Root Cause Analysis" reduces the probability of transitioning to Very_Low by $100p\%$ compared to "Do Nothing" if Telemetry is Abnormal and $75p\%$ if Telemetry is Normal (i.e., root cause analysis is more likely to succeed if there is abnormal telemetry data to troublehsoot).  The change in percentage is evenly distributed among the remaining 4 states.  For example, if $p=0.1$ then the transition matrix for ``Conduct Root Cause Analysis" is shown in Table \ref{tbl:P2}.  Note that only the rows which differ from Table \ref{tbl:P1} are displayed.
+Next, we assume the action "Conduct Root Cause Analysis" reduces the probability of transitioning to Very_Low by $100p\%$ compared to "Do Nothing" if Telemetry is Abnormal and $75p\%$ if Telemetry is Normal (i.e., root cause analysis is more likely to succeed if there is abnormal telemetry data to troubleshoot).  The change in percentage is evenly distributed among the remaining 4 states.  For example, if $p=0.1$ then the transition matrix for ``Conduct Root Cause Analysis" is shown in Table \ref{tbl:P2}.  Note that only the rows which differ from Table \ref{tbl:P1} are displayed.
 
 
 ```{r}
@@ -428,7 +428,7 @@ Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0
 
 \section{Customer Sentiment Analysis}
 
-In order to identify areas that are faring well with the population and those that need improvement, it is useful to tap into large datasets for information on potential areas of improvemnt.  We first identify product-category pairs that correlate with NPS with a correlation of 0.3. Figures \ref{fig:neg-corr} and \ref{fig:neg-corr2} highlight the categories that correlate with NPS.  For Consumer products, lowest NPS was observed for Ideapad 110, the Yoga 710 and the Ideapad 120S; for Commercial products, the lowest was E585, E485 and E580. The recommendations are listed in Table \ref{tab:recom}.  Details on the number of epochs over which correlation was observed is given in Appendix \ref{app:details}.
+In order to identify areas that are faring well with the population and those that need improvement, it is useful to tap into large datasets for information on potential areas of improvement.  We first identify product-category pairs that correlate with NPS with a correlation of 0.3. Figures \ref{fig:neg-corr} and \ref{fig:neg-corr2} highlight the categories that correlate with NPS.  For Consumer products, lowest NPS was observed for Ideapad 110, the Yoga 710 and the Ideapad 120S; for Commercial products, the lowest was E585, E485 and E580. The recommendations are listed in Table \ref{tab:recom}.  Details on the number of epochs over which correlation was observed is given in Appendix \ref{app:details}.
 
 ```{r,  eval=TRUE}
 ## Sentiment of consumer products
@@ -481,11 +481,11 @@ pander::pander(summ[,c(1,2)], row.names = FALSE,caption = "\\label{tab:recom} Su
 
 \section{Conclusion and Recommendations}
 
-We developed two linear models, one for the Consumer segement and one for the Commercial segment, to predict NPS from a combination of Series, PSI and average star ratings.  While there is predictive values in the customer sentiment data, there is still a significant variation in the NPS scores that is not accounted for by our models.  Since we only had 30 days of telemetry data, that was not sufficient to incorporate into our models.  However, we hypothesize that if Lenovo archives sufficient telemetry data (6-12 months) and builds new models incorporating that data, then it may give better predictions.  
+We developed two linear models, one for the Consumer segment and one for the Commercial segment, to predict NPS from a combination of Series, PSI and average star ratings.  While there is predictive values in the customer sentiment data, there is still a significant variation in the NPS scores that is not accounted for by our models.  Since we only had 30 days of telemetry data, that was not sufficient to incorporate into our models.  However, we hypothesize that if Lenovo archives sufficient telemetry data (6-12 months) and builds new models incorporating that data, then it may give better predictions.  
 
 We also developed a framework for a Markov Decision Process (MDP) based on the predicted NPS score and categories of Normal vs. Abnormal telemetry activity (assuming that Lenovo will begin archiving the telemetry data).  Because we had to make many assumptions (e.g., potential actions Lenovo might take, the rewards/costs associated with those actions) in order to formulate the MDP, the _specific_ results of the MDP are of less importance to Lenovo than the analysis process and the framework itself.  We have provided all of the source code used to build and analyze the MDP in the Appendices, and all of the assumptions are parameters in the source code so that Lenovo could easily modify these tools for future use. 
 
-Finally, we identified the three products with the lowest average NPS score in each business segment.  These are the Ideapad 110, the Yoga 710 and the Ideapad 120S for the Consumger segment, and the E585, E485 and E580 for the Commercial segment.  Further, we identified the categories of customer sentiment with the strongest correlation to PSI for each of the lowest performing products.  Some of the categories common to mutiple low-rated products include Battery, Memory and Display.  While we cannot conclude improvements in these categories will improve PSI and NPS scores based on the data available (i.e., correlation does not imply causation), the strong correlation does justify Lenovo considering these categories as areas for potential improvement. 
+Finally, we identified the three products with the lowest average NPS score in each business segment.  These are the Ideapad 110, the Yoga 710 and the Ideapad 120S for the Consumer segment, and the E585, E485 and E580 for the Commercial segment.  Further, we identified the categories of customer sentiment with the strongest correlation to PSI for each of the lowest performing products.  Some of the categories common to multiple low-rated products include Battery, Memory and Display.  While we cannot conclude improvements in these categories will improve PSI and NPS scores based on the data available (i.e., correlation does not imply causation), the strong correlation does justify Lenovo considering these categories as areas for potential improvement. 
 
 \clearpage
 
@@ -510,7 +510,7 @@ Considering the pNPS score as a stochastic process where the random variables ar
 
 $$X_{t} = \sum_{i = 1}^p \alpha_i X_{t-i} + \sum_{j = 1}^q  \beta_j \theta_{t-j} $$.
 
-where $\alpha_i$ $\forall i \in \{1,2,\ldots, p\}$  and $\beta_j$ $\forall j \in \{1,2,\ldots, q\}$ are coefficients of the linear model making a 1-step prediction of pNPS,  $\theta_t$ is the moving average component at time $t$ following a normal distribution with zero mean and variance $\sigma^2_w$. As the pNPS scores are heteroscedastic, the time series are also differenced $d$ times to satisfy the condition of stationarity.  Note that $p$, $d$ and $q$ are  referred to as the order of the model.  In Tables \ref{tab:ARIMA_Commercial} and \ref{tab:ARIMA_Consumer}, we present train set errors of best ARIMA model with the lowest Akaike information criterion (AIC) with order $(p,q,r)$.  The pNPS calcualtions were made over a period of seven days.  It is also observed that temporal correlation is sensitive to the series.
+where $\alpha_i$ $\forall i \in \{1,2,\ldots, p\}$  and $\beta_j$ $\forall j \in \{1,2,\ldots, q\}$ are coefficients of the linear model making a 1-step prediction of pNPS,  $\theta_t$ is the moving average component at time $t$ following a normal distribution with zero mean and variance $\sigma^2_w$. As the pNPS scores are heteroscedastic, the time series are also differenced $d$ times to satisfy the condition of stationarity.  Note that $p$, $d$ and $q$ are  referred to as the order of the model.  In Tables \ref{tab:ARIMA_Commercial} and \ref{tab:ARIMA_Consumer}, we present train set errors of best ARIMA model with the lowest Akaike information criterion (AIC) with order $(p,q,r)$.  The pNPS calculations were made over a period of seven days.  It is also observed that temporal correlation is sensitive to the series.
 
 ```{r}
 series.ts.main.com <- series.ts.main.com%>% mutate(MAE = round(MAE,digits = 2),RMSE = round(RMSE,digits = 2)) %>%
@@ -524,7 +524,7 @@ knitr::kable(series.ts.main[series.ts.main$Duration == 7,-5],row.names = FALSE,c
 ```
 
 
-While the intention is analyze the statistical relationship between adjacent samples of pNPS calculations, the epoch overwhich the pNPS scores are varied from 1 to 30 days.  Figures \ref{fig:arima.comm} and \ref{fig:arima.con} shows the Mean Absolute Errors as a funtion of the epoch over which the pNPS score was calculated.  It is observed for a majority of the Series, the surveys are least correlated with a two-week window.
+While the intention is analyze the statistical relationship between adjacent samples of pNPS calculations, the epoch over which the pNPS scores are varied from 1 to 30 days.  Figures \ref{fig:arima.comm} and \ref{fig:arima.con} shows the Mean Absolute Errors as a function of the epoch over which the pNPS score was calculated.  It is observed for a majority of the Series, the surveys are least correlated with a two-week window.
 
 ```{r figs, echo = FALSE,  fig.cap = "\\label{fig:arima.comm} Train set pNPS prediction errors vs window size for commercial data.", fig.width = 8}
 plt.com <- ggplot(series.ts.main.com, aes(x = Duration, y = MAE, color = SeriesName)) + geom_line(size = 1)+xlab("Duration of pNPS window (Days)")+theme(legend.position = "bottom")+labs(color = "")+guides(color = guide_legend(nrow = 4))
@@ -890,7 +890,7 @@ n.tel = 2
 p.tel = matrix(c(0.75, 0.25, 0.25, 0.75),nrow = 2, ncol = 2, byrow = TRUE)
 rownames(p.tel) <- c("N","AN")
 colnames(p.tel) <- c("N","AN")
-knitr::kable(p.tel ,  caption = "A possible telemetry transtion matrix from ",  row.names = TRUE )
+knitr::kable(p.tel ,  caption = "A possible telemetry transition matrix from ",  row.names = TRUE )
 
 ```
 
