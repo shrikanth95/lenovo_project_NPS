@@ -423,9 +423,9 @@ Given the previous assumptions, we analyzed the MDP for $p \in [0.1, 0.2, 0.3, 0
 
 \section{Customer Sentiment Analysis}
 
-In order to identify areas that are faring well with the population and those that need improvement, it is useful to tap into large datasets for information on potential areas of improvemnt.  We first identify product-category pairs that correlate with NPS with a correlation of 0.3. Figures.\ref{fig:neg-corr} and \ref{fig:neg-corr2} highlight the categories that correlate with NPS.  For Consumer products, lowest NPS was observed for Ideapad 110, the Yoga 710 and the Ideapad 120S; for Commercial products, the lowest was E585, E485 and E580. The recommendations are listed in Fig.\ref{fig:recom}.
+In order to identify areas that are faring well with the population and those that need improvement, it is useful to tap into large datasets for information on potential areas of improvemnt.  We first identify product-category pairs that correlate with NPS with a correlation of 0.3. Figures.\ref{fig:neg-corr} and \ref{fig:neg-corr2} highlight the categories that correlate with NPS.  For Consumer products, lowest NPS was observed for Ideapad 110, the Yoga 710 and the Ideapad 120S; for Commercial products, the lowest was E585, E485 and E580. The recommendations are listed in Table\ref{tab:recom}.  Details on the number of epocs overwhich correlation was observed is given in the Appendix in \ref{tab:recom_d}
 
-```{r,  eval=TRUE, fig.cap = "\\label{fig:recom} Summary of recommendations", fig.width = 8, fig.pos="H"}
+```{r,  eval=TRUE}
 ## Sentiment of consumer products
 psi.study <- sentiment.consumer %>%
   mutate(ProductName = I(toupper(as.character(Product)))) %>%  
@@ -466,7 +466,12 @@ nps.study2 <- survey.comm %>%
 rel.prod2 = nps.study2[order(nps.study2$nps)[1:3],c(1,5)]
 recom = rbind(merge(summary.cat,rel.prod,by = "ProductName") %>% filter (correlation>0.3),
               merge(summary.cat2,rel.prod2,by = "ProductName") %>% filter (correlation>0.3))
-ggplot(recom)+geom_col(aes(x = ProductName, y= n, fill = Category))+theme_gray(base_size = 9)+theme(legend.position = "bottom")+labs(fill= "")+xlab("Product Name")+ylab("# of Categories")
+# ggplot(recom)+geom_col(aes(x = ProductName, y= n, fill = Category))+theme_gray(base_size = 9)+theme(legend.position = "bottom")+labs(fill= "")+xlab("Product Name")+ylab("# of Categories")
+summ = recom %>% group_by(ProductName) %>% summarise(Cateogry.sum = tolower(x = paste(unlist(Category), collapse =", ")),
+                                              Length = paste(unlist(size), collapse =", "),
+                                              Correlation = paste(unlist(round(correlation,2)), collapse =", "))
+# summ = cbind(data.frame(Segment = c(rep("Commercial",3), rep("Consumer", 3))), summ)
+pander::pander(summ[,c(1,2)], row.names = FALSE,caption = "\\label{tab:recom} Summary of recommendations", col.names = c("Product", "Category"))
 ```
 
 \section{Conclusion and Recommendations}
@@ -903,6 +908,12 @@ slice.high %>% ggplot(aes(x = psi, y = nps, group = ProductName))+geom_point()+t
 
 slice.high2 %>% ggplot(aes(x = psi, y = nps, group = ProductName))+geom_point()+theme(legend.position = "none")+geom_smooth(method="lm", se=FALSE, color="darkgrey")+facet_wrap(.~Category)+xlab("PSI")+ylab("pNPS")
 
+
+```
+
+\subsection{Detailed Summary of Recommendations}
+```{r}
+pander::pander(summ, row.names = FALSE,caption = "\\label{tab:recom_d} Summary of recommendations", col.names = c("Product", "Category", "Number of Epochs", "Correlation"))
 
 ```
 
